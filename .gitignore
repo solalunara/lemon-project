@@ -1,0 +1,9 @@
+*.obj
+*.o
+*.P
+*.map
+*.so
+*.ipch
+*.pdb
+*.db
+*.sdf

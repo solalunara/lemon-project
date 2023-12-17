@@ -1,0 +1,14 @@
+{
+    "files.associations": {
+        "any": "cpp",
+        "bit": "cpp",
+        "array": "cpp",
+        "fstream": "cpp",
+        "functional": "cpp",
+        "future": "cpp",
+        "system_error": "cpp",
+        "tuple": "cpp",
+        "__hash_table": "cpp",
+        "deque": "cpp"
+    }
+}
