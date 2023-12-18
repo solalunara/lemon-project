@@ -10,5 +10,18 @@
         "tuple": "cpp",
         "__hash_table": "cpp",
         "deque": "cpp"
-    }
+    },
+    "makefile.makefilePath": "games.mak",
+    "makefile.launchConfigurations": [
+        {
+            "cwd": "/home/fvp/.steam/steam/steamapps/common/Source SDK Base 2013 Singleplayer",
+            "binaryPath": "/home/fvp/.steam/steam/steamapps/common/Source SDK Base 2013 Singleplayer/hl2",
+            "binaryArgs": [
+                "-alowdebug",
+                "-novid",
+                "-game",
+                "/home/fvp/.steam/steam/steamapps/sourcemods/lemon-project"
+            ]
+        }
+    ],
 }

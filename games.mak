@@ -24,6 +24,9 @@ all:
 
 all-targets : client_portal mathlib raytrace server_portal tier1 vgui_controls 
 
+run: all
+	/home/fvp/.steam/steam/steamapps/common/Source\ SDK\ Base\ 2013\ Singleplayer/hl2 -allowdebug -novid -game "/home/fvp/.steam/steam/sourcemods/lemon-project"
+
 
 # Individual projects + dependencies
 
