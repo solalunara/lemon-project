@@ -61,7 +61,7 @@ COPY_DLL_TO_SRV = 0
 #endif
 
 # WARN_FLAGS += -Wno-unknown-pragmas -Wno-unused-parameter -Wno-unused-value -Wno-missing-field-initializers -Wno-sign-compare -Wno-reorder -Wno-invalid-offsetof -Wno-float-equal -Werror=return-type -fdiagnostics-show-option -Wformat -Wformat-security
-WARN_FLAGS = 
+WARN_FLAGS = -w
 
 
 ifeq ($(OS),Linux)

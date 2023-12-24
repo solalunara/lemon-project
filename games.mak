@@ -1,6 +1,6 @@
 # VPC MASTER MAKEFILE
 
-
+export CFG:=debug
 
 SHELL:=/bin/bash
 # to control parallelism, set the MAKE_JOBS environment variable

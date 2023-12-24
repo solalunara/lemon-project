@@ -22,6 +22,11 @@
                 "-game",
                 "/home/fvp/.steam/steam/steamapps/sourcemods/lemon-project"
             ]
+        },
+        {
+            "cwd": "/home/fvp/prog/lemon-project/sp/src/game/server",
+            "binaryPath": "/home/fvp/prog/lemon-project/sp/src/game/server/a.out",
+            "binaryArgs": []
         }
     ],
 }

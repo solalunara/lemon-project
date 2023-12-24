@@ -135,7 +135,9 @@ int CPortal_CollisionEvent::ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject
 			if ( ( pSimulators[0] && pEntities[1]->bIsRelativeEntity ) || ( pSimulators[1] && pEntities[0]->bIsRelativeEntity ) )
 				return 0;
 
-			if( bStatic[0] || bStatic[1] )
+			if( bStatic[0] || bStatic[1] || 
+				CPSCollisionEntity::IsPortalSimulatorCollisionEntity( pEntities[ 0 ] ) || 
+				CPSCollisionEntity::IsPortalSimulatorCollisionEntity( pEntities[ 1 ] ) )
 			{
 				for( int i = 0; i != 2; ++i )
 				{

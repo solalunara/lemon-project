@@ -614,9 +614,10 @@ float CWeaponPortalgun::FirePortal( bool bPortal2, Vector *pVector /*= 0*/, bool
 		}
 
 		vTracerOrigin = vEye
-			+ forward * ( 30.0f + 50.0f )
+			//+ forward * ( 30.0f + 50.0f )
 			+ right * 4.0f
-			+ up * (-5.0f);
+			//+ up * (-5.0f);
+			;
 	}
 	else
 	{
@@ -682,7 +683,7 @@ float CWeaponPortalgun::FirePortal( bool bPortal2, Vector *pVector /*= 0*/, bool
 		pPortal->m_vDelayedPosition = vFinalPosition;
 		pPortal->m_hPlacedBy = this;
 		*/
-		CFlyingPortal *pNewPortal = CFlyingPortal::Create( vTraceStart, vDirection, ( ( bPlayer ) ? ( sv_portal_blast_speed.GetFloat() ) : ( BLAST_SPEED_NON_PLAYER ) ), m_iPortalLinkageGroupID, bPortal2 );
+		CFlyingPortal *pNewPortal = CFlyingPortal::Create( vTracerOrigin, vDirection, ( ( bPlayer ) ? ( sv_portal_blast_speed.GetFloat() ) : ( BLAST_SPEED_NON_PLAYER ) ), m_iPortalLinkageGroupID, bPortal2 );
 	}
 	
 

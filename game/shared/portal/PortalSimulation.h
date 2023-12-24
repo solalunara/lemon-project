@@ -12,6 +12,7 @@
 #pragma once
 #endif
 
+
 #include "mathlib/polyhedron.h"
 #include "const.h"
 #include "tier1/utlmap.h"
@@ -279,7 +280,8 @@ class CPortalSimulator
 public:
 	CPortalSimulator( void );
 	~CPortalSimulator( void );
-	void				MoveTo( const Vector &ptCenter, const QAngle &angles, bool bNewPlace );
+	void				MoveTo( const Vector &ptCenter, const QAngle &angles );
+	void				UpdatePosition( const Vector &ptCenter, const QAngle &angles );
 	void				SetCollisionEntityVelocity( const Vector &velocity );
 	void				ClearEverything( void );
 
@@ -288,6 +290,8 @@ public:
 	CPortalSimulator	*GetLinkedPortalSimulator( void ) const;
 
 	void				SetPortalSimulatorCallbacks( CPortalSimulatorEventCallbacks *pCallbacks );
+
+	void				UpdatePolyhedrons( void ); 
 	
 	bool				IsReadyToSimulate( void ) const; //is active and linked to another portal
 	
@@ -395,6 +399,7 @@ protected:
 public:
 	const PS_InternalData_t &m_DataAccess;
 	Vector vPortalVelocity;
+
 
 	friend class CPS_AutoGameSys_EntityListener;
 };

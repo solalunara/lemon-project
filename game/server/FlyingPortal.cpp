@@ -30,8 +30,8 @@ END_SEND_TABLE()
 
 LINK_ENTITY_TO_CLASS( flying_portal, CFlyingPortal );
 
-#define FLYING_PORTAL_MINS Vector( -.5, -.5, -.5 )
-#define FLYING_PORTAL_MAXS Vector( .5, .5, .5 )
+#define FLYING_PORTAL_MINS Vector( -.2, -.2, -.2 )
+#define FLYING_PORTAL_MAXS Vector( .2, .2, .2 )
 
 
 CFlyingPortal::CFlyingPortal()
@@ -101,19 +101,17 @@ void CFlyingPortal::Spawn( void )
 	pPhysEnvironment = physics->CreateEnvironment();
 	pPhysEnvironment->SetGravity( Vector( 0, 0, -1 ) );
 	pPhysEnvironment->SetSimulationTimestep( DEFAULT_TICK_INTERVAL );
-	pPhysEnvironment->SetCollisionEventHandler( &g_CollisionHandler );
-	pPhysEnvironment->SetCollisionSolver( &g_CollisionHandler );
+	pPhysEnvironment->SetCollisionEventHandler( &g_collisions );
+	pPhysEnvironment->SetCollisionSolver( &g_collisions );
 	*/
 
+	SetModel( "models/props/sphere.mdl" );
+	SetModelScale( 0.5f );
 	SetSolid( SOLID_VPHYSICS );
 	SetMoveType( MOVETYPE_VPHYSICS );
 	SetSize( FLYING_PORTAL_MINS, FLYING_PORTAL_MAXS );
-	SetModelScale( 0.5f );
-
-	SetModel( "models/props/sphere.mdl" );
 
 
-	vcollide_t *pCollide = modelinfo->GetVCollide( GetModelIndex() );
 
 	solid_t tmpSolid;
 	solid_t *pSolid = &tmpSolid;
@@ -153,12 +151,13 @@ void CFlyingPortal::Spawn( void )
 	*/
 
 	pPhysObject = VPhysicsInitNormal( SOLID_VPHYSICS, 0, false, pSolid );
-
-	VPhysicsSetObject( pPhysObject );
 	pPhysObject->EnableGravity( false );
 	pPhysObject->EnableCollisions( true );
-	pPhysObject->SetMass( 10.0f );
+	pPhysObject->SetMass( 0.1f );
 	pPhysObject->EnableDrag( false );
+	pPhysObject->SetGameFlags( FVPHYSICS_WAS_THROWN );
+	VPhysicsSetObject( pPhysObject );
+
 
 	SetUse( &CFlyingPortal::Use );
 
@@ -229,15 +228,48 @@ void CFlyingPortal::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 	}
 }
 
+void CFlyingPortal::StartTouch( CBaseEntity *pOther )
+{
+	Msg( "Classic collision with " );
+	Msg( pOther->GetClassname() );
+	Msg( "\n" );
+	if ( FClassnameIs( pOther, "trigger_portal_cleanser" ) )
+	{
+		CBaseTrigger *pTrigger = static_cast<CBaseTrigger*>( pOther );
+		Msg( "portal hit portal cleanser\n" );
+
+		if ( pTrigger && !pTrigger->m_bDisabled )
+		{
+			CProp_Portal *pPortal = CProp_Portal::FindPortal( iLinkageGroup, bPortal2, true );
+
+			pPortal->m_iDelayedFailure = PORTAL_FIZZLE_CLEANSER;
+			VectorAngles( -vVelocity, pPortal->m_qDelayedAngles );
+			pPortal->m_vDelayedPosition = GetAbsOrigin();
+
+			bHitObject = true;
+			return;
+		}
+	}
+}
 
 void CFlyingPortal::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 {
+	if ( bHitObject )
+		return;
+
 	Vector CurrentVelocity;
 	pPhysObject->GetVelocity( &CurrentVelocity, NULL );
 	if ( CurrentVelocity.LengthSqr() == 0 )
 		return; //portal has not yet started moving - don't interfere w/ it
 
 	CBaseEntity *pOther = pEvent->pEntities[!index];
+
+	Msg( "Vphysics collision with " );
+	Msg( pOther->GetClassname() );
+	Msg( "\n" );
+
+	if ( pOther->IsPlayer() )
+		return;
 
 	Vector vCollisionNormal, vCollisionPoint;
 	pEvent->pInternalData->GetSurfaceNormal( vCollisionNormal );
@@ -260,6 +292,7 @@ void CFlyingPortal::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent 
 	if ( FClassnameIs( pOther, "trigger_portal_cleanser" ) )
 	{
 		CBaseTrigger *pTrigger = static_cast<CBaseTrigger*>( pOther );
+		Msg( "portal hit portal cleanser\n" );
 
 		if ( pTrigger && !pTrigger->m_bDisabled )
 		{

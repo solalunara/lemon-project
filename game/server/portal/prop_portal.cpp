@@ -331,6 +331,7 @@ bool CProp_Portal::TestCollision( const Ray_t &ray, unsigned int fContentsMask, 
 
 //-----------------------------------------------------------------------------
 // Purpose: detect motion of the surface behind the portal
+// 		This function must be called frequently to alert the client whether or not it needs to re-render
 //-----------------------------------------------------------------------------
 void CProp_Portal::detectMove( void )
 {
@@ -524,7 +525,7 @@ void CProp_Portal::UpdatePortalThink( void )
 {
 	detectMove();
 
-	m_PortalSimulator.SetCollisionEntityVelocity( getPortalVelocity() );
+	//m_PortalSimulator.SetCollisionEntityVelocity( getPortalVelocity() );
 	
 	//get some geometric data
 	Vector vOrigin = GetAbsOrigin();
@@ -570,7 +571,9 @@ void CProp_Portal::UpdatePortalThink( void )
 	m_PortalSimulator.vPortalVelocity = m_vPortalVelocity;
 	if ( m_vPortalVelocity.Get() != vec3_origin )
 	{
-		UpdatePortalLinkage( false );
+		//UpdatePortalLinkage( false );
+		m_PortalSimulator.UpdatePosition( vOrigin, GetAbsAngles() );
+		UpdatePortalTeleportMatrix();
 		WakeNearbyEntities();
 		if ( m_hLinkedPortal )
 			m_hLinkedPortal->WakeNearbyEntities();
@@ -579,7 +582,9 @@ void CProp_Portal::UpdatePortalThink( void )
 	}
 	else if ( m_bMovedLastThink )
 	{
-		UpdatePortalLinkage( false );
+		//UpdatePortalLinkage( false );
+		m_PortalSimulator.UpdatePosition( vOrigin, GetAbsAngles() );
+		UpdatePortalTeleportMatrix();
 		WakeNearbyEntities();		
 		if ( m_hLinkedPortal )
 			m_hLinkedPortal->WakeNearbyEntities();
@@ -913,7 +918,8 @@ void CProp_Portal::Activate( void )
 	{
 		Vector ptCenter = GetAbsOrigin();
 		QAngle qAngles = GetAbsAngles();
-		m_PortalSimulator.MoveTo( ptCenter, qAngles, true );
+		//m_PortalSimulator.MoveTo( ptCenter, qAngles );
+		//m_PortalSimulator.UpdatePolyhedrons();
 
 		//resimulate everything we're touching
 		touchlink_t *root = ( touchlink_t * )GetDataObject( TOUCHLINK );
@@ -1191,7 +1197,6 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 		{
 			ptNewOrigin = m_matrixThisToLinked * ptOtherOrigin;
 		}
-
 		
 		// Reorient object angles, originally we did a transformation on the angles, but that doesn't quite work right for gimbal lock cases
 		qNewAngles = TransformAnglesToWorldSpace( qOtherAngles, m_matrixThisToLinked.As3x4() );
@@ -2093,7 +2098,7 @@ void CProp_Portal::UpdatePortalLinkage( bool bNewPlace )
 
 		Vector ptCenter = GetAbsOrigin();
 		QAngle qAngles = GetAbsAngles();
-		m_PortalSimulator.MoveTo( ptCenter, qAngles, bNewPlace );
+		m_PortalSimulator.MoveTo( ptCenter, qAngles );
 
 		if( pLink )
 			m_PortalSimulator.AttachTo( &pLink->m_PortalSimulator );

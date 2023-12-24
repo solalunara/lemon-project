@@ -26,6 +26,7 @@ public:
 	virtual void			OnRestore( void );
 
 	void					Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
+	virtual void			StartTouch( CBaseEntity *pOther );
 	virtual void			VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
 
 	virtual int				UpdateTransmitState( void )	// set transmit filter to transmit always
@@ -46,8 +47,6 @@ public:
 
 	IPhysicsObject	*pPhysObject;
 	IPhysicsEnvironment *pPhysEnvironment;
-
-	CPortal_CollisionEvent g_CollisionHandler;
 };
 
 bool IsEntityPortalable( CBaseEntity *pEnt );
