@@ -282,6 +282,7 @@ public:
 	~CPortalSimulator( void );
 	void				MoveTo( const Vector &ptCenter, const QAngle &angles );
 	void				UpdatePosition( const Vector &ptCenter, const QAngle &angles );
+	void				UpdatePortalHole( void ); //updates the hole in the wall to match the portal's position as given by internal data
 	void				SetCollisionEntityVelocity( const Vector &velocity );
 	void				ClearEverything( void );
 

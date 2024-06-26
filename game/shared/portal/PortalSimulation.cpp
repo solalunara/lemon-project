@@ -150,7 +150,6 @@ CPortalSimulator::CPortalSimulator( void )
 	PS_SD_Static_World_StaticProps_ClippedProp_t::pTraceEntity = GetWorldEntity(); //will overinitialize, but it's cheap
 
 	m_InternalData.Simulation.pCollisionEntity = (CPSCollisionEntity *)CreateEntityByName( "portalsimulator_collisionentity" );
-	m_InternalData.Simulation.pCollisionEntity->SetParent( this );
 	Assert( m_InternalData.Simulation.pCollisionEntity != NULL );
 	if( m_InternalData.Simulation.pCollisionEntity )
 	{
@@ -163,8 +162,6 @@ CPortalSimulator::CPortalSimulator( void )
 	PS_SD_Static_World_StaticProps_ClippedProp_t::pTraceEntity = GetClientWorldEntity();
 #endif
 }
-
-
 
 CPortalSimulator::~CPortalSimulator( void )
 {
@@ -193,28 +190,59 @@ CPortalSimulator::~CPortalSimulator( void )
 		UTIL_Remove( m_InternalData.Simulation.pCollisionEntity );
 		m_InternalData.Simulation.pCollisionEntity = NULL;
 	}
+
+	
 #endif
 }
 
-void CPortalSimulator::UpdatePosition( const Vector &ptCenter, const QAngle &angles )
+void CPortalSimulator::UpdatePortalHole()
 {
-	if( (m_InternalData.Placement.ptCenter == ptCenter) && (m_InternalData.Placement.qAngles == angles) ) //not actually moving at all
-		return;
+	if( m_InternalData.Placement.pHoleShapeCollideable )
+		physcollision->DestroyCollide( m_InternalData.Placement.pHoleShapeCollideable );
+
+	float fHolePlanes[6*4];
+
+	//first and second planes are always forward and backward planes
+	fHolePlanes[(0*4) + 0] = m_InternalData.Placement.PortalPlane.m_Normal.x;
+	fHolePlanes[(0*4) + 1] = m_InternalData.Placement.PortalPlane.m_Normal.y;
+	fHolePlanes[(0*4) + 2] = m_InternalData.Placement.PortalPlane.m_Normal.z;
+	fHolePlanes[(0*4) + 3] = m_InternalData.Placement.PortalPlane.m_Dist - 0.5f;
+
+	fHolePlanes[(1*4) + 0] = -m_InternalData.Placement.PortalPlane.m_Normal.x;
+	fHolePlanes[(1*4) + 1] = -m_InternalData.Placement.PortalPlane.m_Normal.y;
+	fHolePlanes[(1*4) + 2] = -m_InternalData.Placement.PortalPlane.m_Normal.z;
+	fHolePlanes[(1*4) + 3] = (-m_InternalData.Placement.PortalPlane.m_Dist) + 500.0f;
 
 
-	//update geometric data
-	{
-		m_InternalData.Placement.ptCenter = ptCenter;
-		m_InternalData.Placement.qAngles = angles;
-		AngleVectors( angles, &m_InternalData.Placement.vForward, &m_InternalData.Placement.vRight, &m_InternalData.Placement.vUp );
-		
-		m_InternalData.Placement.PortalPlane.Init( m_InternalData.Placement.vForward, m_InternalData.Placement.vForward.Dot( m_InternalData.Placement.ptCenter ) );
-	}
+	//the remaining planes will always have the same ordering of normals, with different distances plugged in for each convex we're creating
+	//normal order is up, down, left, right
 
-#ifndef CLIENT_DLL	
-	//m_InternalData.Simulation.pCollisionEntity->SetAbsOrigin( ptCenter );
-	//m_InternalData.Simulation.pCollisionEntity->SetAbsAngles( angles );
-#endif
+	fHolePlanes[(2*4) + 0] = m_InternalData.Placement.vUp.x;
+	fHolePlanes[(2*4) + 1] = m_InternalData.Placement.vUp.y;
+	fHolePlanes[(2*4) + 2] = m_InternalData.Placement.vUp.z;
+	fHolePlanes[(2*4) + 3] = m_InternalData.Placement.vUp.Dot( m_InternalData.Placement.ptCenter + (m_InternalData.Placement.vUp * (PORTAL_HALF_HEIGHT * 0.98f)) );
+
+	fHolePlanes[(3*4) + 0] = -m_InternalData.Placement.vUp.x;
+	fHolePlanes[(3*4) + 1] = -m_InternalData.Placement.vUp.y;
+	fHolePlanes[(3*4) + 2] = -m_InternalData.Placement.vUp.z;
+	fHolePlanes[(3*4) + 3] = -m_InternalData.Placement.vUp.Dot( m_InternalData.Placement.ptCenter - (m_InternalData.Placement.vUp * (PORTAL_HALF_HEIGHT * 0.98f)) );
+
+	fHolePlanes[(4*4) + 0] = -m_InternalData.Placement.vRight.x;
+	fHolePlanes[(4*4) + 1] = -m_InternalData.Placement.vRight.y;
+	fHolePlanes[(4*4) + 2] = -m_InternalData.Placement.vRight.z;
+	fHolePlanes[(4*4) + 3] = -m_InternalData.Placement.vRight.Dot( m_InternalData.Placement.ptCenter - (m_InternalData.Placement.vRight * (PORTAL_HALF_WIDTH * 0.98f)) );
+
+	fHolePlanes[(5*4) + 0] = m_InternalData.Placement.vRight.x;
+	fHolePlanes[(5*4) + 1] = m_InternalData.Placement.vRight.y;
+	fHolePlanes[(5*4) + 2] = m_InternalData.Placement.vRight.z;
+	fHolePlanes[(5*4) + 3] = m_InternalData.Placement.vRight.Dot( m_InternalData.Placement.ptCenter + (m_InternalData.Placement.vRight * (PORTAL_HALF_WIDTH * 0.98f)) );
+
+	CPolyhedron *pPolyhedron = GeneratePolyhedronFromPlanes( fHolePlanes, 6, PORTAL_POLYHEDRON_CUT_EPSILON, true );
+	Assert( pPolyhedron != NULL );
+	CPhysConvex *pConvex = physcollision->ConvexFromConvexPolyhedron( *pPolyhedron );
+	pPolyhedron->Release();
+	Assert( pConvex != NULL );
+	m_InternalData.Placement.pHoleShapeCollideable = physcollision->ConvertConvexToCollide( &pConvex, 1 );
 }
 
 void CPortalSimulator::MoveTo( const Vector &ptCenter, const QAngle &angles )
@@ -270,54 +298,7 @@ void CPortalSimulator::MoveTo( const Vector &ptCenter, const QAngle &angles )
 	UpdateLinkMatrix();
 
 	//update hole shape - used to detect if an entity is within the portal hole bounds
-	{
-		if( m_InternalData.Placement.pHoleShapeCollideable )
-			physcollision->DestroyCollide( m_InternalData.Placement.pHoleShapeCollideable );
-
-		float fHolePlanes[6*4];
-
-		//first and second planes are always forward and backward planes
-		fHolePlanes[(0*4) + 0] = m_InternalData.Placement.PortalPlane.m_Normal.x;
-		fHolePlanes[(0*4) + 1] = m_InternalData.Placement.PortalPlane.m_Normal.y;
-		fHolePlanes[(0*4) + 2] = m_InternalData.Placement.PortalPlane.m_Normal.z;
-		fHolePlanes[(0*4) + 3] = m_InternalData.Placement.PortalPlane.m_Dist - 0.5f;
-
-		fHolePlanes[(1*4) + 0] = -m_InternalData.Placement.PortalPlane.m_Normal.x;
-		fHolePlanes[(1*4) + 1] = -m_InternalData.Placement.PortalPlane.m_Normal.y;
-		fHolePlanes[(1*4) + 2] = -m_InternalData.Placement.PortalPlane.m_Normal.z;
-		fHolePlanes[(1*4) + 3] = (-m_InternalData.Placement.PortalPlane.m_Dist) + 500.0f;
-
-
-		//the remaining planes will always have the same ordering of normals, with different distances plugged in for each convex we're creating
-		//normal order is up, down, left, right
-
-		fHolePlanes[(2*4) + 0] = m_InternalData.Placement.vUp.x;
-		fHolePlanes[(2*4) + 1] = m_InternalData.Placement.vUp.y;
-		fHolePlanes[(2*4) + 2] = m_InternalData.Placement.vUp.z;
-		fHolePlanes[(2*4) + 3] = m_InternalData.Placement.vUp.Dot( m_InternalData.Placement.ptCenter + (m_InternalData.Placement.vUp * (PORTAL_HALF_HEIGHT * 0.98f)) );
-
-		fHolePlanes[(3*4) + 0] = -m_InternalData.Placement.vUp.x;
-		fHolePlanes[(3*4) + 1] = -m_InternalData.Placement.vUp.y;
-		fHolePlanes[(3*4) + 2] = -m_InternalData.Placement.vUp.z;
-		fHolePlanes[(3*4) + 3] = -m_InternalData.Placement.vUp.Dot( m_InternalData.Placement.ptCenter - (m_InternalData.Placement.vUp * (PORTAL_HALF_HEIGHT * 0.98f)) );
-
-		fHolePlanes[(4*4) + 0] = -m_InternalData.Placement.vRight.x;
-		fHolePlanes[(4*4) + 1] = -m_InternalData.Placement.vRight.y;
-		fHolePlanes[(4*4) + 2] = -m_InternalData.Placement.vRight.z;
-		fHolePlanes[(4*4) + 3] = -m_InternalData.Placement.vRight.Dot( m_InternalData.Placement.ptCenter - (m_InternalData.Placement.vRight * (PORTAL_HALF_WIDTH * 0.98f)) );
-
-		fHolePlanes[(5*4) + 0] = m_InternalData.Placement.vRight.x;
-		fHolePlanes[(5*4) + 1] = m_InternalData.Placement.vRight.y;
-		fHolePlanes[(5*4) + 2] = m_InternalData.Placement.vRight.z;
-		fHolePlanes[(5*4) + 3] = m_InternalData.Placement.vRight.Dot( m_InternalData.Placement.ptCenter + (m_InternalData.Placement.vRight * (PORTAL_HALF_WIDTH * 0.98f)) );
-
-		CPolyhedron *pPolyhedron = GeneratePolyhedronFromPlanes( fHolePlanes, 6, PORTAL_POLYHEDRON_CUT_EPSILON, true );
-		Assert( pPolyhedron != NULL );
-		CPhysConvex *pConvex = physcollision->ConvexFromConvexPolyhedron( *pPolyhedron );
-		pPolyhedron->Release();
-		Assert( pConvex != NULL );
-		m_InternalData.Placement.pHoleShapeCollideable = physcollision->ConvertConvexToCollide( &pConvex, 1 );
-	}
+	UpdatePortalHole();
 
 #ifndef CLIENT_DLL
 	for( int i = 0; i != iFixEntityCount; ++i )
@@ -366,6 +347,43 @@ void CPortalSimulator::MoveTo( const Vector &ptCenter, const QAngle &angles )
 	DEBUGTIMERONLY( DevMsg( 2, "[PSDT:%d] %sCPortalSimulator::MoveTo() FINISH: %fms\n", GetPortalSimulatorGUID(), TABSPACING, functionTimer.GetDuration().GetMillisecondsF() ); );
 }
 
+void CPortalSimulator::UpdatePosition( const Vector &ptCenter, const QAngle &angles )
+{
+	if( (m_InternalData.Placement.ptCenter == ptCenter) && (m_InternalData.Placement.qAngles == angles) ) //not actually moving at all
+		return;
+
+
+	//update geometric data
+	{
+		m_InternalData.Placement.ptCenter = ptCenter;
+		m_InternalData.Placement.qAngles = angles;
+		AngleVectors( angles, &m_InternalData.Placement.vForward, &m_InternalData.Placement.vRight, &m_InternalData.Placement.vUp );
+		
+		m_InternalData.Placement.PortalPlane.Init( m_InternalData.Placement.vForward, m_InternalData.Placement.vForward.Dot( m_InternalData.Placement.ptCenter ) );
+	}
+
+
+#ifndef CLIENT_DLL
+	ClearLinkedPhysics();
+	ClearLocalPhysics();
+#endif
+	ClearLinkedCollision();
+	ClearLocalCollision();
+	ClearPolyhedrons();
+
+	m_bLocalDataIsReady = true;
+	UpdateLinkMatrix();
+
+	//update hole shape - used to detect if an entity is within the portal hole bounds
+	//could consider making a physics object so we can shadow control instead of delete/replace, but might add more of a headache for collisions w/ objects
+	UpdatePortalHole();
+
+	CreatePolyhedrons();
+	CreateAllCollision();
+#ifndef CLIENT_DLL
+	CreateAllPhysics();
+#endif
+}
 #ifndef CLIENT_DLL
 void CPortalSimulator::SetCollisionEntityVelocity( const Vector &velocity )
 {

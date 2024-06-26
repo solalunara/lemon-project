@@ -29,4 +29,11 @@
             "binaryArgs": []
         }
     ],
+    "cSpell.enableFiletypes": [
+        "!cpp",
+        "!json"
+    ],
+    "C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
+        "clang-diagnostic-error"
+    ],
 }

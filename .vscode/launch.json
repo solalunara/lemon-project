@@ -2,19 +2,13 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug the program",
+            "name": "Attach to Process",
             "type": "cppdbg",
-            "request": "launch",
-            "cwd": "/home/fvp/.steam/steam/steamapps/sourcemods/mod_portal",
+            "request": "attach",
             "program": "/home/fvp/.steam/steam/steamapps/common/Source SDK Base 2013 Singleplayer/hl2_linux",
+            "processId": "${command:pickProcess}",
             "miDebuggerPath": "/usr/bin/gdb",
             "MIMode": "gdb",
-            "args": [
-                "-alowdebug",
-                "-novid",
-                "-game",
-                "/home/fvp/.steam/steam/steamapps/sourcemods/lemon-project"
-            ]
         }
     ]
 }
