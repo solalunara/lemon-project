@@ -292,8 +292,6 @@ public:
 
 	void				SetPortalSimulatorCallbacks( CPortalSimulatorEventCallbacks *pCallbacks );
 
-	void				UpdatePolyhedrons( void ); 
-	
 	bool				IsReadyToSimulate( void ) const; //is active and linked to another portal
 	
 	void				SetCollisionGenerationEnabled( bool bEnabled ); //enable/disable collision generation for the hole in the wall, needed for proper vphysics simulation
@@ -366,15 +364,15 @@ protected:
 	void				TakePhysicsOwnership( CBaseEntity *pEntity );
 	void				ReleasePhysicsOwnership( CBaseEntity *pEntity, bool bContinuePhysicsCloning = true, bool bMovingToLinkedSimulator = false );
 
-	void				CreateAllPhysics( void );
+	void				CreateAllPhysics( bool update = false );
 	void				CreateMinimumPhysics( void ); //stuff needed by any part of physics simulations
-	void				CreateLocalPhysics( void );
-	void				CreateLinkedPhysics( void );
+	void				CreateLocalPhysics( bool update = false );
+	void				CreateLinkedPhysics( bool update = false );
 
 	void				ClearAllPhysics( void );
 	void				ClearMinimumPhysics( void );
-	void				ClearLocalPhysics( void );
-	void				ClearLinkedPhysics( void );
+	void				ClearLocalPhysics( bool update = false );
+	void				ClearLinkedPhysics( bool update = false );
 
 	void				ClearLinkedEntities( void ); //gets rid of transformed shadow clones
 #endif
