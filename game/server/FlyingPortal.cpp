@@ -34,9 +34,9 @@ LINK_ENTITY_TO_CLASS( flying_portal, CFlyingPortal );
 #define FLYING_PORTAL_MAXS Vector( .2, .2, .2 )
 
 
-CFlyingPortal::CFlyingPortal()
+CFlyingPortal::CFlyingPortal() :
+	CBaseAnimating(), bHitObject( false ), iNumBounces( 0 )
 {
-	bHitObject = false;
 	RegisterThinkContext( "FlyThinkContext" );
 }
 
@@ -44,10 +44,6 @@ CFlyingPortal *CFlyingPortal::Create( Vector vStartPos, Vector vDirection, float
 {
 	QAngle Angles;
 	VectorAngles( vDirection, Angles );
-	if ( vDirection.z < 0 )
-	{
-		vStartPos.z += 40 * vDirection.Normalized().z; //move past the player's feet
-	}
 	CFlyingPortal *pPortal = static_cast<CFlyingPortal *>( BaseClass::Create( "flying_portal", vStartPos, Angles ) );
 	pPortal->pPhysObject->SetPosition( vStartPos, Angles, true );
 	pPortal->qAngles = Angles;
@@ -56,7 +52,7 @@ CFlyingPortal *CFlyingPortal::Create( Vector vStartPos, Vector vDirection, float
 	pPortal->iLinkageGroup = iLinkageGroup;
 	pPortal->bPortal2 = bPortal2;
 	pPortal->SetContextThink( &CFlyingPortal::FlyThink, gpGlobals->curtime, "FlyThinkContext" );
-	pPortal->SetCollisionGroup( COLLISION_GROUP_INTERACTIVE );
+	pPortal->SetCollisionGroup( COLLISION_GROUP_PUSHAWAY );
 
 
 	byte r = bPortal2 ? 255 : 10;
@@ -83,7 +79,7 @@ void CFlyingPortal::UpdateOnRemove( void )
 void CFlyingPortal::Precache( void )
 {
 	BaseClass::Precache();
-	PrecacheModel( "models/props/sphere.mdl" );
+	PrecacheModel( "models/props_bts/rocket.mdl" );
 }
 
 
@@ -97,25 +93,14 @@ void CFlyingPortal::Spawn( void )
 	Precache();
 
 	pPhysEnvironment = physenv;
-	/*
-	pPhysEnvironment = physics->CreateEnvironment();
-	pPhysEnvironment->SetGravity( Vector( 0, 0, -1 ) );
-	pPhysEnvironment->SetSimulationTimestep( DEFAULT_TICK_INTERVAL );
-	pPhysEnvironment->SetCollisionEventHandler( &g_collisions );
-	pPhysEnvironment->SetCollisionSolver( &g_collisions );
-	*/
 
-	SetModel( "models/props/sphere.mdl" );
-	SetModelScale( 0.5f );
+	SetModel( "models/props_bts/rocket.mdl" );
 	SetSolid( SOLID_VPHYSICS );
+	SetSolidFlags( FSOLID_NOT_SOLID | FSOLID_TRIGGER );
 	SetMoveType( MOVETYPE_VPHYSICS );
-	SetSize( FLYING_PORTAL_MINS, FLYING_PORTAL_MAXS );
+	SetCollisionBounds( FLYING_PORTAL_MINS, FLYING_PORTAL_MAXS );
+	CollisionProp()->UseTriggerBounds( true, 4 );
 
-
-
-	solid_t tmpSolid;
-	solid_t *pSolid = &tmpSolid;
-	PhysModelParseSolidByIndex( tmpSolid, this, GetModelIndex(), -1 );
 
 /*
 	int surfaceProp = -1;
@@ -150,13 +135,16 @@ void CFlyingPortal::Spawn( void )
 	pPhysObject = pObject;
 	*/
 
-	pPhysObject = VPhysicsInitNormal( SOLID_VPHYSICS, 0, false, pSolid );
+	pPhysObject = VPhysicsInitNormal( SOLID_VPHYSICS, 0, false );
 	pPhysObject->EnableGravity( false );
 	pPhysObject->EnableCollisions( true );
-	pPhysObject->SetMass( 0.1f );
+	pPhysObject->SetMass( 20 );
 	pPhysObject->EnableDrag( false );
-	pPhysObject->SetGameFlags( FVPHYSICS_WAS_THROWN );
+	Vector inertia = Vector( 1, 10, 10 );
+	pPhysObject->SetInertia( inertia );
+	//pPhysObject->SetGameFlags( FVPHYSICS_WAS_THROWN );
 	VPhysicsSetObject( pPhysObject );
+	pPhysObject->RecheckCollisionFilter();
 
 
 	SetUse( &CFlyingPortal::Use );
@@ -188,7 +176,7 @@ void CFlyingPortal::FlyThink( void )
 	fMoveDist += ( vVelocity * gpGlobals->frametime * FRAMES_PER_THINK ).Length();
 
 	//if the portal has moved past the max distance, cancel it
-	if ( fMoveDist > MAX_MOVEDIST )
+	if ( fMoveDist > MAX_MOVEDIST || iNumBounces >= 3 )
 	{
 		CProp_Portal *pPortal = CProp_Portal::FindPortal( iLinkageGroup, bPortal2, true );
 
@@ -196,14 +184,12 @@ void CFlyingPortal::FlyThink( void )
 		VectorAngles( -vVelocity, pPortal->m_qDelayedAngles );
 		pPortal->m_vDelayedPosition = GetAbsOrigin();
 
-		SetContextThink( NULL, TICK_NEVER_THINK, "FlyThinkContext" );
-
-		pPortal->PlacePortal( pPortal->m_vDelayedPosition, pPortal->m_qDelayedAngles, PORTAL_ANALOG_SUCCESS_PASSTHROUGH_SURFACE );
+		pPortal->PlacePortal( pPortal->m_vDelayedPosition, pPortal->m_qDelayedAngles, PORTAL_ANALOG_SUCCESS_INVALID_SURFACE );
 
 		pPortal->m_vDelayedPosition = GetAbsOrigin();
 		pPortal->m_hPlacedBy = this;
 		pPortal->SetContextThink( &CProp_Portal::PlacementThink, gpGlobals->curtime, s_pDelayedPlacementContext );
-		UTIL_Remove( this );
+		bHitObject = true;
 	}
 
 	if ( bHitObject && !PhysIsInCallback() )
@@ -220,7 +206,7 @@ void CFlyingPortal::FlyThink( void )
 
 void CFlyingPortal::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
 {
-	DevMsg( "Used\n" );
+	Msg( "Used\n" );
 	CBasePlayer *pPlayer = ToBasePlayer( pActivator );
 	if ( pPlayer )
 	{
@@ -252,17 +238,20 @@ void CFlyingPortal::StartTouch( CBaseEntity *pOther )
 	}
 }
 
+static CBaseEntity *s_pPreviousHitEntity = NULL;
 void CFlyingPortal::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 {
+
 	if ( bHitObject )
 		return;
 
 	Vector CurrentVelocity;
 	pPhysObject->GetVelocity( &CurrentVelocity, NULL );
-	if ( CurrentVelocity.LengthSqr() == 0 )
-		return; //portal has not yet started moving - don't interfere w/ it
 
 	CBaseEntity *pOther = pEvent->pEntities[!index];
+	if ( pOther != s_pPreviousHitEntity && pEvent->deltaCollisionTime > 0.05f )
+		iNumBounces++;
+
 
 	Msg( "Vphysics collision with " );
 	Msg( pOther->GetClassname() );

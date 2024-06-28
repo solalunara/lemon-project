@@ -525,8 +525,6 @@ void CProp_Portal::UpdatePortalThink( void )
 {
 	detectMove();
 
-	//m_PortalSimulator.SetCollisionEntityVelocity( getPortalVelocity() );
-	
 	//get some geometric data
 	Vector vOrigin = GetAbsOrigin();
 	Vector vForward;

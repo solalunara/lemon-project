@@ -614,9 +614,9 @@ float CWeaponPortalgun::FirePortal( bool bPortal2, Vector *pVector /*= 0*/, bool
 		}
 
 		vTracerOrigin = vEye
-			//+ forward * ( 30.0f + 50.0f )
-			+ right * 4.0f
-			//+ up * (-5.0f);
+			//+ forward * 30.0f //default 30
+			//+ right * 4.0f
+			//+ up * (-5.0f)
 			;
 	}
 	else
@@ -626,7 +626,7 @@ float CWeaponPortalgun::FirePortal( bool bPortal2, Vector *pVector /*= 0*/, bool
 		QAngle angShootDir;
 		GetAttachment( LookupAttachment( "muzzle" ), vecShootOrigin, angShootDir );
 		vEye = vecShootOrigin;
-		vTracerOrigin = vecShootOrigin + Vector( 0, 0, 10 );
+		vTracerOrigin = vecShootOrigin;
 		AngleVectors( angShootDir, &vDirection, NULL, NULL );
 	}
 
@@ -640,7 +640,7 @@ float CWeaponPortalgun::FirePortal( bool bPortal2, Vector *pVector /*= 0*/, bool
 		vDirection = *pVector;
 	}
 
-	Vector vTraceStart = vTracerOrigin + (vDirection * m_fMinRange1);
+	Vector vTraceStart = vTracerOrigin /* + (vDirection * m_fMinRange1)*/;
 
 	Vector vFinalPosition;
 	QAngle qFinalAngles;

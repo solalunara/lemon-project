@@ -72,6 +72,7 @@ LINK_ENTITY_TO_CLASS( trigger_portal_cleanser, CTriggerPortalCleanser );
 void CTriggerPortalCleanser::Spawn( void )
 {	
 	BaseClass::Spawn();
+	AddSpawnFlags( SF_TRIGGER_ALLOW_PHYSICS );
 	InitTrigger();
 }
 

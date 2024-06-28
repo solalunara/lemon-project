@@ -44,6 +44,7 @@ public:
 	QAngle			qAngles;
 
 	bool			bHitObject;
+	int				iNumBounces;
 
 	IPhysicsObject	*pPhysObject;
 	IPhysicsEnvironment *pPhysEnvironment;
