@@ -95,6 +95,7 @@ public:
 	Vector					getPortalVelocity( void );
 	void					detectMove();
 	void					findParent();
+	bool					HasParent( void ) { return m_hRelativeEntity != NULL; }
 	void					RecursiveMoveForward( int iMaxTimes );
 
 	void					PlacementThink( void );

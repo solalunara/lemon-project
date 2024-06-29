@@ -610,7 +610,10 @@ void C_Prop_Portal::OnDataChanged( DataUpdateType_t updateType )
 			Vector vScaledRight = m_vRight * (PORTAL_HALF_WIDTH * 0.95f);
 			Vector vScaledUp = m_vUp * (PORTAL_HALF_HEIGHT  * 0.95f);
 
-			m_PortalSimulator.MoveTo( GetAbsOrigin(), GetAbsAngles() );
+			if ( bPortalMovedFar )	
+				m_PortalSimulator.MoveTo( GetAbsOrigin(), GetAbsAngles() );
+			else
+				m_PortalSimulator.UpdatePosition( GetAbsOrigin(), GetAbsAngles() );
 
 			//update our associated portal environment
 			//CPortal_PhysicsEnvironmentMgr::CreateEnvironment( this );

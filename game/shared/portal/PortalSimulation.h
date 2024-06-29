@@ -272,6 +272,7 @@ struct PS_InternalData_t
 {
 	PS_PlacementData_t Placement;
 	PS_SimulationData_t Simulation;
+	CBaseEntity *Parent;
 };
 
 
@@ -282,6 +283,7 @@ public:
 	~CPortalSimulator( void );
 	void				MoveTo( const Vector &ptCenter, const QAngle &angles );
 	void				UpdatePosition( const Vector &ptCenter, const QAngle &angles );
+	void				SetParent( CBaseEntity *Parent ) { m_InternalData.Parent = Parent; };
 	void				UpdatePortalHole( void ); //updates the hole in the wall to match the portal's position as given by internal data
 	void				SetCollisionEntityVelocity( const Vector &velocity );
 	void				ClearEverything( void );

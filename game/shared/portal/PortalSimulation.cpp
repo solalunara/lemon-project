@@ -130,6 +130,7 @@ CPortalSimulator::CPortalSimulator( void )
 	m_DataAccess(m_InternalData)
 {
 	s_PortalSimulators.AddToTail( this );
+	m_InternalData.Parent = NULL;
 
 #ifdef CLIENT_DLL
 	m_bGenerateCollision = (GameRules() && GameRules()->IsMultiplayer());
@@ -249,6 +250,10 @@ void CPortalSimulator::MoveTo( const Vector &ptCenter, const QAngle &angles )
 {
 	if( (m_InternalData.Placement.ptCenter == ptCenter) && (m_InternalData.Placement.qAngles == angles) ) //not actually moving at all
 		return;
+
+#ifndef CLIENT_DLL	
+	m_InternalData.Parent = NULL; //reset parent status, let portal figure it out
+#endif
 
 	CREATEDEBUGTIMER( functionTimer );
 
@@ -1299,12 +1304,9 @@ void CPortalSimulator::CreateLocalPhysics( bool update )
 		Assert( m_InternalData.Simulation.Static.World.Brushes.pPhysicsObject == NULL ); //Be sure to find graceful fixes for asserts, performance is a big concern with portal simulation
 		if( m_InternalData.Simulation.Static.World.Brushes.pCollideable != NULL )
 		{
-			m_InternalData.Simulation.Static.World.Brushes.pPhysicsObject = m_InternalData.Simulation.pPhysicsEnvironment->CreatePolyObject( m_InternalData.Simulation.Static.World.Brushes.pCollideable, m_InternalData.Simulation.Static.SurfaceProperties.surface.surfaceProps, vec3_origin, vec3_angle, &params );
+			m_InternalData.Simulation.Static.World.Brushes.pPhysicsObject = m_InternalData.Simulation.pPhysicsEnvironment->CreatePolyObjectStatic( m_InternalData.Simulation.Static.World.Brushes.pCollideable, m_InternalData.Simulation.Static.SurfaceProperties.surface.surfaceProps, vec3_origin, vec3_angle, &params );
 			//m_InternalData.Simulation.pPhysicsEnvironment->CreateShadowController( m_InternalData.Simulation.Static.World.Brushes.pPhysicsObject, false, false );
-			m_InternalData.Simulation.Static.World.Brushes.pPhysicsObject->EnableGravity( false );
 			//m_InternalData.Simulation.Static.World.Brushes.pPhysicsObject->EnableCollisions( false );
-			m_InternalData.Simulation.Static.World.Brushes.pPhysicsObject->EnableMotion( false );
-			m_InternalData.Simulation.Static.World.Brushes.pPhysicsObject->EnableDrag( false );
 
 			if( (m_InternalData.Simulation.pCollisionEntity != NULL) && (m_InternalData.Simulation.pCollisionEntity->VPhysicsGetObject() == NULL) )
 				m_InternalData.Simulation.pCollisionEntity->VPhysicsSetObject(m_InternalData.Simulation.Static.World.Brushes.pPhysicsObject);
@@ -1824,7 +1826,7 @@ void CPortalSimulator::CreateLocalCollision( void )
 	{
 		CTraceFilterWorldAndPropsOnly filter;
 		trace_t Trace;
-		UTIL_TraceLine( m_InternalData.Placement.ptCenter + m_InternalData.Placement.vForward, m_InternalData.Placement.ptCenter - (m_InternalData.Placement.vForward * 500.0f), MASK_SOLID_BRUSHONLY, &filter, &Trace );
+		UTIL_TraceLine( m_InternalData.Placement.ptCenter + m_InternalData.Placement.vForward, m_InternalData.Placement.ptCenter - (m_InternalData.Placement.vForward * 500.0f), MASK_PLAYERSOLID, NULL, &Trace );
 
 		if( Trace.fraction != 1.0f )
 		{
@@ -2054,6 +2056,8 @@ void CPortalSimulator::CreatePolyhedrons( void )
 				int iBrushCount = WorldBrushes.Count();
 				ConvertBrushListToClippedPolyhedronList( pBrushList, iBrushCount, fWorldClipPlane_Reverse, 1, PORTAL_POLYHEDRON_CUT_EPSILON, &m_InternalData.Simulation.Static.World.Brushes.Polyhedrons );
 			}
+
+			
 		}
 
 		//static props
@@ -2211,10 +2215,52 @@ void CPortalSimulator::CreatePolyhedrons( void )
 		int iWallClippedPolyhedronCount = 0;
 		if( IsSimulatingVPhysics() ) //if not simulating vphysics, we skip making the entire wall, and just create the minimal tube instead
 		{
-			enginetrace->GetBrushesInAABB( vAABBMins, vAABBMaxs, &WallBrushes, MASK_SOLID );
+			enginetrace->GetBrushesInAABB( vAABBMins, vAABBMaxs, &WallBrushes, MASK_SOLID_BRUSHONLY );
 
 			if( WallBrushes.Count() != 0 )
 				ConvertBrushListToClippedPolyhedronList( WallBrushes.Base(), WallBrushes.Count(), fPlanes, 1, PORTAL_POLYHEDRON_CUT_EPSILON, &WallBrushPolyhedrons_ClippedToWall );
+			if ( m_InternalData.Parent )
+			{
+				IPhysicsObject *ParentPhys = m_InternalData.Parent->VPhysicsGetObject();
+				if ( ParentPhys )
+				{
+					const CPhysCollide *c_ParentCollide = ParentPhys->GetCollide();
+					Assert( c_ParentCollide );
+					const int iConvexLimit = 512;
+					CPhysConvex **pConvexes = new CPhysConvex *[ iConvexLimit ];
+					physcollision->GetConvexesUsedInCollideable( c_ParentCollide, pConvexes, iConvexLimit );
+					int n;
+					for ( n = 0; n < iConvexLimit && pConvexes[ n ]; ++n )
+					{
+						Assert( n != iConvexLimit - 1 );
+						if ( n == iConvexLimit - 1 )
+						{
+							Warning( "CPortalSimulator::CreatePolyhedrons: Convex limit reached for parent collision model.\n" );
+							break;
+						}
+					}
+					
+					for ( int i = 0; i < n; ++i )
+					{
+						if ( !pConvexes[ i ] )
+						{
+							Warning( "CPortalSimulator::CreatePolyhedrons: NULL convex in parent collision model.\n" );
+							continue;
+						}
+						CPolyhedron *poly = physcollision->PolyhedronFromConvex( pConvexes[ i ], true );
+						for ( int j = poly->iVertexCount; --j >= 0; )
+						{
+							matrix3x4_t m = m_InternalData.Parent->EntityToWorldTransform();
+
+							VectorTransform( poly->pVertices[ j ].Base(), m, poly->pVertices[ j ].Base() );
+						}
+						if ( poly )
+							WallBrushPolyhedrons_ClippedToWall.AddToTail( poly );
+						else
+							Warning( "CPortalSimulator::CreatePolyhedrons: Failed to create polyhedron from parent collision model.\n" );
+					}
+				}
+			}
 			
 			if( WallBrushPolyhedrons_ClippedToWall.Count() != 0 )
 			{

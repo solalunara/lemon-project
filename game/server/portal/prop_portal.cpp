@@ -42,7 +42,7 @@
 #define MAXIMUM_PORTAL_EXIT_VELOCITY 1000.0f
 #define NEW_PORTAL_LIMIT 10
 #define UPDATE_PORTAL_THINK_TIME gpGlobals->frametime
-#define PORTAL_TELEPORT_TIME 0
+#define PORTAL_TELEPORT_TIME 1
 #define CREATE_PHYSICS_TIME gpGlobals->framecount % 20 == 0
 #define PORTAL_HACK_SHOVE_AMOUNT 7
 
@@ -389,6 +389,8 @@ void CProp_Portal::findParent( void )
 		//if ( FClassnameIs( tr.m_pEnt, "func_physbox" ) )
 		//	tr.m_pEnt->SetCollisionGroup( COLLISION_GROUP_DEBRIS );
 		m_hRelativeEntity.Set( tr.m_pEnt );
+
+		m_PortalSimulator.SetParent( tr.m_pEnt );
 	}
 }
 
@@ -515,6 +517,7 @@ void CProp_Portal::FindRelativeEntityThink( void )
 		//vAttatch = GetLocalOrigin();
 		prevRelOrig = GetAbsOrigin();
 		SetContextThink( &CProp_Portal::UpdatePortalThink, gpGlobals->curtime, s_pFindRelativeEntityContext );
+		m_PortalSimulator.UpdatePosition( GetAbsOrigin(), GetAbsAngles() ); //run this after setting relative entity so that the simulator can use it
 	}
 }
 
