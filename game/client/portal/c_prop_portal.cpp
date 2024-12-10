@@ -220,6 +220,9 @@ void C_Prop_Portal::Activate( void )
 
 void C_Prop_Portal::ClientThink( void )
 {
+	if ( m_hRelativeEntity.Get() != m_PortalSimulator.m_DataAccess.Parent )
+		m_PortalSimulator.SetParent( m_hRelativeEntity.Get() );
+
 	//reseting the model once a server frame isn't enough as server is 65fps and client goes much higher
 	//so if the portal is moving, call data changed
 	if ( m_vPortalVelocity != vec3_origin )
