@@ -25,7 +25,7 @@ endif
 INCLUDEDIRS += ../../common ../../public ../../public/tier0 ../../public/tier1 ../../thirdparty/SDL2 ../../game/server/generated_proto_portal ../../thirdparty/protobuf-2.3.0/src ./ ../../game/shared ../../utils/common ../../game/shared/econ ../../game/server/NextBot ../../game/shared/portal ./hl2 ./episodic ../../game/shared/Multiplayer ../../game/shared/hl2 ../../game/shared/portal ./portal 
 CONFTYPE=dll
 IMPORTLIBRARY=
-GAMEOUTPUTFILE=../../../game/portal/bin/server.so
+GAMEOUTPUTFILE=/home/fvp/steam/steam/steamapps/sourcemods/mod_portal/bin/server.so
 OUTPUTFILE=$(OBJ_DIR)/server.so
 
 
