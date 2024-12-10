@@ -138,7 +138,7 @@ void CFlyingPortal::Spawn( void )
 	pPhysObject = VPhysicsInitNormal( SOLID_VPHYSICS, 0, false );
 	pPhysObject->EnableGravity( false );
 	pPhysObject->EnableCollisions( true );
-	pPhysObject->SetMass( 20 );
+	pPhysObject->SetMass( 2 );
 	pPhysObject->EnableDrag( false );
 	Vector inertia = Vector( 1, 10, 10 );
 	pPhysObject->SetInertia( inertia );
