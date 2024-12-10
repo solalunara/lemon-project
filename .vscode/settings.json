@@ -9,7 +9,8 @@
         "system_error": "cpp",
         "tuple": "cpp",
         "__hash_table": "cpp",
-        "deque": "cpp"
+        "deque": "cpp",
+        "new": "cpp"
     },
     "makefile.makefilePath": "games.mak",
     "makefile.launchConfigurations": [
