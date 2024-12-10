@@ -85,6 +85,10 @@ int CPortal_CollisionEvent::ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject
 				unsigned int bCloneIn = pSimulators[i]->m_DataAccess.Simulation.Dynamic.EntFlags[iCloneIndex] & PSEF_IS_IN_PORTAL_HOLE;
 				unsigned int bSourcIn = pSourceSimulator->m_DataAccess.Simulation.Dynamic.EntFlags[iSourcIndex] & PSEF_IS_IN_PORTAL_HOLE;
 				Assert( bCloneIn == bSourcIn );
+				if ( bCloneIn != bSourcIn )
+				{
+					Warning( "Shadow clone %i and source %i are in different portal holes\n", iCloneIndex, iSourcIndex );
+				}
 			}
 		}
 #endif
@@ -409,6 +413,8 @@ static void ModifyWeight_PreCollision( vcollisionevent_t *pEvent )
 				float fSavedMass, fSavedRotationalDamping;
 
 				AssertMsg( pGrabController, "Physics object is held, but we can't find the holding controller." );
+				if ( !pGrabController )
+					return; //there is nothing we can do
 				GetSavedParamsForCarriedPhysObject( pGrabController, pUnshadowedObjects[i], &fSavedMass, &fSavedRotationalDamping );
 
 				pEvent->pObjects[i]->SetMass( fSavedMass );
