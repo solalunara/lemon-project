@@ -87,7 +87,10 @@ int CPortal_CollisionEvent::ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject
 				Assert( bCloneIn == bSourcIn );
 				if ( bCloneIn != bSourcIn )
 				{
-					Warning( "Shadow clone %i and source %i are in different portal holes\n", iCloneIndex, iSourcIndex );
+					if ( bSourcIn )
+						Warning( "Shadow clone %i wasn't in portal hole while source %i was and were attempting to collide \n", iCloneIndex, iSourcIndex );
+					if ( bCloneIn )
+						Warning( "Shadow clone %i was in portal hole while source %i wasn't and were attempting to collide \n", iCloneIndex, iSourcIndex );
 				}
 			}
 		}

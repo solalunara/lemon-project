@@ -285,7 +285,6 @@ public:
 	void				UpdatePosition( const Vector &ptCenter, const QAngle &angles );
 	void				SetParent( CBaseEntity *Parent ) { m_InternalData.Parent = Parent; };
 	void				UpdatePortalHole( void ); //updates the hole in the wall to match the portal's position as given by internal data
-	void				SetCollisionEntityVelocity( const Vector &velocity );
 	void				ClearEverything( void );
 
 	void				AttachTo( CPortalSimulator *pLinkedPortalSimulator );
@@ -363,15 +362,15 @@ protected:
 	friend class CPSCollisionEntity;
 
 #ifndef CLIENT_DLL //physics handled purely by server side
-	void				TakePhysicsOwnership( CBaseEntity *pEntity );
-	void				ReleasePhysicsOwnership( CBaseEntity *pEntity, bool bContinuePhysicsCloning = true, bool bMovingToLinkedSimulator = false );
+	void				TakePhysicsOwnership( CBaseEntity *pEntity, bool update );
+	void				ReleasePhysicsOwnership( CBaseEntity *pEntity, bool update, bool bContinuePhysicsCloning = true, bool bMovingToLinkedSimulator = false );
 
 	void				CreateAllPhysics( bool update = false );
 	void				CreateMinimumPhysics( void ); //stuff needed by any part of physics simulations
 	void				CreateLocalPhysics( bool update = false );
 	void				CreateLinkedPhysics( bool update = false );
 
-	void				ClearAllPhysics( void );
+	void				ClearAllPhysics( bool update = false );
 	void				ClearMinimumPhysics( void );
 	void				ClearLocalPhysics( bool update = false );
 	void				ClearLinkedPhysics( bool update = false );
@@ -379,16 +378,16 @@ protected:
 	void				ClearLinkedEntities( void ); //gets rid of transformed shadow clones
 #endif
 
-	void				CreateAllCollision( void );
-	void				CreateLocalCollision( void );
+	void				CreateAllCollision( bool update = false );
+	void				CreateLocalCollision( bool update = false );
 	void				CreateLinkedCollision( void );
 
-	void				ClearAllCollision( void );
+	void				ClearAllCollision( bool update = false );
 	void				ClearLinkedCollision( void );
-	void				ClearLocalCollision( void );
+	void				ClearLocalCollision( bool update = false );
 
-	void				CreatePolyhedrons( void ); //carves up the world around the portal's position into sets of polyhedrons
-	void				ClearPolyhedrons( void );
+	void				CreatePolyhedrons( bool update = false ); //carves up the world around the portal's position into sets of polyhedrons
+	void				ClearPolyhedrons( bool update = false );
 
 	void				UpdateLinkMatrix( void );
 
@@ -399,7 +398,6 @@ protected:
 
 public:
 	const PS_InternalData_t &m_DataAccess;
-	Vector vPortalVelocity;
 
 
 	friend class CPS_AutoGameSys_EntityListener;
