@@ -1,6 +1,6 @@
 # VPC MASTER MAKEFILE
 
-export CFG:=debug
+
 
 SHELL:=/bin/bash
 # to control parallelism, set the MAKE_JOBS environment variable
@@ -22,17 +22,10 @@ endif
 all: 
 	@$(MAKE) -f $(lastword $(MAKEFILE_LIST)) -j$(MAKE_JOBS) all-targets
 
-all-targets : client_portal mathlib raytrace server_portal tier1 vgui_controls 
-
-run: all
-	/home/luna/.steam/steam/steamapps/common/Source\ SDK\ Base\ 2013\ Singleplayer/hl2 -allowdebug -novid -game "/home/luna/.steam/steam/sourcemods/lemon-project"
+all-targets : mathlib raytrace serverplugin_empty tier1 vgui_controls 
 
 
 # Individual projects + dependencies
-
-client_portal : mathlib tier1 vgui_controls 
-	@echo "Building: client_portal"
-	@+cd /home/luna/prog/lemon-project/sp/src/game/client && $(MAKE) -f client_linux32_portal.mak $(CLEANPARAM)
 
 mathlib : 
 	@echo "Building: mathlib"
@@ -42,9 +35,9 @@ raytrace :
 	@echo "Building: raytrace"
 	@+cd /home/luna/prog/lemon-project/sp/src/raytrace && $(MAKE) -f raytrace_linux32.mak $(CLEANPARAM)
 
-server_portal : mathlib tier1 
-	@echo "Building: server_portal"
-	@+cd /home/luna/prog/lemon-project/sp/src/game/server && $(MAKE) -f server_linux32_portal.mak $(CLEANPARAM)
+serverplugin_empty : mathlib tier1 
+	@echo "Building: serverplugin_empty"
+	@+cd /home/luna/prog/lemon-project/sp/src/utils/serverplugin_sample && $(MAKE) -f serverplugin_empty_linux32.mak $(CLEANPARAM)
 
 tier1 : 
 	@echo "Building: tier1"
@@ -58,18 +51,15 @@ vgui_controls :
 # the tags file) seems like more work than it's worth.  feel free to fix that up if it bugs you. 
 TAGS:
 	@rm -f TAGS
-	@find /home/luna/prog/lemon-project/sp/src/game/client -name '*.cpp' -print0 | xargs -0 etags --declarations --ignore-indentation --append
-	@find /home/luna/prog/lemon-project/sp/src/game/client -name '*.h' -print0 | xargs -0 etags --language=c++ --declarations --ignore-indentation --append
-	@find /home/luna/prog/lemon-project/sp/src/game/client -name '*.c' -print0 | xargs -0 etags --declarations --ignore-indentation --append
 	@find /home/luna/prog/lemon-project/sp/src/mathlib -name '*.cpp' -print0 | xargs -0 etags --declarations --ignore-indentation --append
 	@find /home/luna/prog/lemon-project/sp/src/mathlib -name '*.h' -print0 | xargs -0 etags --language=c++ --declarations --ignore-indentation --append
 	@find /home/luna/prog/lemon-project/sp/src/mathlib -name '*.c' -print0 | xargs -0 etags --declarations --ignore-indentation --append
 	@find /home/luna/prog/lemon-project/sp/src/raytrace -name '*.cpp' -print0 | xargs -0 etags --declarations --ignore-indentation --append
 	@find /home/luna/prog/lemon-project/sp/src/raytrace -name '*.h' -print0 | xargs -0 etags --language=c++ --declarations --ignore-indentation --append
 	@find /home/luna/prog/lemon-project/sp/src/raytrace -name '*.c' -print0 | xargs -0 etags --declarations --ignore-indentation --append
-	@find /home/luna/prog/lemon-project/sp/src/game/server -name '*.cpp' -print0 | xargs -0 etags --declarations --ignore-indentation --append
-	@find /home/luna/prog/lemon-project/sp/src/game/server -name '*.h' -print0 | xargs -0 etags --language=c++ --declarations --ignore-indentation --append
-	@find /home/luna/prog/lemon-project/sp/src/game/server -name '*.c' -print0 | xargs -0 etags --declarations --ignore-indentation --append
+	@find /home/luna/prog/lemon-project/sp/src/utils/serverplugin_sample -name '*.cpp' -print0 | xargs -0 etags --declarations --ignore-indentation --append
+	@find /home/luna/prog/lemon-project/sp/src/utils/serverplugin_sample -name '*.h' -print0 | xargs -0 etags --language=c++ --declarations --ignore-indentation --append
+	@find /home/luna/prog/lemon-project/sp/src/utils/serverplugin_sample -name '*.c' -print0 | xargs -0 etags --declarations --ignore-indentation --append
 	@find /home/luna/prog/lemon-project/sp/src/tier1 -name '*.cpp' -print0 | xargs -0 etags --declarations --ignore-indentation --append
 	@find /home/luna/prog/lemon-project/sp/src/tier1 -name '*.h' -print0 | xargs -0 etags --language=c++ --declarations --ignore-indentation --append
 	@find /home/luna/prog/lemon-project/sp/src/tier1 -name '*.c' -print0 | xargs -0 etags --declarations --ignore-indentation --append
@@ -81,7 +71,7 @@ TAGS:
 
 # Mark all the projects as phony or else make will see the directories by the same name and think certain targets 
 
-.PHONY: TAGS showtargets regen showregen clean cleantargets cleanandremove relink client_portal mathlib raytrace server_portal tier1 vgui_controls 
+.PHONY: TAGS showtargets regen showregen clean cleantargets cleanandremove relink mathlib raytrace serverplugin_empty tier1 vgui_controls 
 
 
 
@@ -123,10 +113,9 @@ showtargets:
 	echo 'clean' && \
 	echo 'regen' && \
 	echo 'showregen' && \
-	echo 'client_portal' && \
 	echo 'mathlib' && \
 	echo 'raytrace' && \
-	echo 'server_portal' && \
+	echo 'serverplugin_empty' && \
 	echo 'tier1' && \
 	echo 'vgui_controls'
 
@@ -136,12 +125,12 @@ showtargets:
 
 
 regen: 
-	devtools/bin/vpc_linux /portal +game /mksln games 
+	devtools/bin/vpc_linux /hl2 /episodic +everything /mksln everything 
 
 
 # Here's a command to list out all the targets
 
 
 showregen: 
-	@echo devtools/bin/vpc_linux /portal +game /mksln games 
+	@echo devtools/bin/vpc_linux /hl2 /episodic +everything /mksln everything 
 

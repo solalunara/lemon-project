@@ -1,6 +1,6 @@
 [vpc crc file version 2]
-0731181f /home/fvp/Downloads/lemon/src/devtools/bin/vpc_linux
-_Nc_/vpcgame:portal_
+0731181f /home/luna/prog/lemon-project/sp/src/devtools/bin/vpc_linux
+_Nc_/vpcgame:valve_
 407e2c20 raytrace.vpc
 30577f77 ../vpc_scripts/source_lib_base.vpc
 d752cf80 ../vpc_scripts/platform_dirs.vpc

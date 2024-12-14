@@ -5,7 +5,7 @@
             "name": "Attach to Process",
             "type": "cppdbg",
             "request": "attach",
-            "program": "/home/fvp/.steam/steam/steamapps/common/Source SDK Base 2013 Singleplayer/hl2_linux",
+            "program": "/home/luna/.steam/steam/steamapps/common/Source SDK Base 2013 Singleplayer/hl2_linux",
             "processId": "${command:pickProcess}",
             "miDebuggerPath": "/usr/bin/gdb",
             "MIMode": "gdb",

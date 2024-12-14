@@ -15,18 +15,18 @@
     "makefile.makefilePath": "games.mak",
     "makefile.launchConfigurations": [
         {
-            "cwd": "/home/fvp/.steam/steam/steamapps/common/Source SDK Base 2013 Singleplayer",
-            "binaryPath": "/home/fvp/.steam/steam/steamapps/common/Source SDK Base 2013 Singleplayer/hl2",
+            "cwd": "/home/luna/.steam/steam/steamapps/common/Source SDK Base 2013 Singleplayer",
+            "binaryPath": "/home/luna/.steam/steam/steamapps/common/Source SDK Base 2013 Singleplayer/hl2",
             "binaryArgs": [
                 "-alowdebug",
                 "-novid",
                 "-game",
-                "/home/fvp/.steam/steam/steamapps/sourcemods/lemon-project"
+                "/home/luna/.steam/steam/steamapps/sourcemods/lemon-project"
             ]
         },
         {
-            "cwd": "/home/fvp/prog/lemon-project/sp/src/game/server",
-            "binaryPath": "/home/fvp/prog/lemon-project/sp/src/game/server/a.out",
+            "cwd": "/home/luna/prog/lemon-project/sp/src/game/server",
+            "binaryPath": "/home/luna/prog/lemon-project/sp/src/game/server/a.out",
             "binaryArgs": []
         }
     ],

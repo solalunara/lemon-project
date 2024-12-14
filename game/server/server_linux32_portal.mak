@@ -18,14 +18,14 @@ DLL_EXT=.so
 SYM_EXT=.dbg
 FORCEINCLUDES= 
 ifeq "$(CFG)" "debug"
-DEFINES += -DVPC -DRAD_TELEMETRY_DISABLED -DDEBUG -D_DEBUG -DGNUC -DPOSIX -DCOMPILER_GCC -D_DLL_EXT=.so -D_LINUX -DLINUX -DPOSIX -D_POSIX -DDLLNAME=server -DBINK_VIDEO -DGL_GLEXT_PROTOTYPES -DDX_TO_GL_ABSTRACTION -DUSE_SDL -DDEV_BUILD -DFRAME_POINTER_OMISSION_DISABLED -DGAME_DLL -DVECTOR -DVERSION_SAFE_STEAM_API_INTERFACES -DPROTECTED_THINGS_ENABLE -Dsprintf=use_Q_snprintf_instead_of_sprintf -Dstrncpy=use_Q_strncpy_instead -D_snprintf=use_Q_snprintf_instead -DSWDS -DPORTAL -DHL2_DLL -DHL2_EPISODIC -DUSES_SAVERESTORE -D_EXTERNAL_DLL_EXT=.so -DVPCGAMECAPS=PORTAL -DPROJECTDIR=/home/fvp/Downloads/lemon/src/game/server -D_DLL_EXT=.so -DSOURCE1=1 -DVPCGAME=portal -D_LINUX=1 -D_POSIX=1 -DLINUX=1 -DPOSIX=1 
+DEFINES += -DVPC -DRAD_TELEMETRY_DISABLED -DDEBUG -D_DEBUG -DGNUC -DPOSIX -DCOMPILER_GCC -D_DLL_EXT=.so -D_LINUX -DLINUX -DPOSIX -D_POSIX -DDLLNAME=server -DBINK_VIDEO -DGL_GLEXT_PROTOTYPES -DDX_TO_GL_ABSTRACTION -DUSE_SDL -DDEV_BUILD -DFRAME_POINTER_OMISSION_DISABLED -DGAME_DLL -DVECTOR -DVERSION_SAFE_STEAM_API_INTERFACES -DPROTECTED_THINGS_ENABLE -Dsprintf=use_Q_snprintf_instead_of_sprintf -Dstrncpy=use_Q_strncpy_instead -D_snprintf=use_Q_snprintf_instead -DSWDS -DPORTAL -DHL2_DLL -DHL2_EPISODIC -DUSES_SAVERESTORE -D_EXTERNAL_DLL_EXT=.so -DVPCGAMECAPS=PORTAL -DPROJECTDIR=/home/luna/Downloads/lemon/src/game/server -D_DLL_EXT=.so -DSOURCE1=1 -DVPCGAME=portal -D_LINUX=1 -D_POSIX=1 -DLINUX=1 -DPOSIX=1 
 else
-DEFINES += -DVPC -DRAD_TELEMETRY_DISABLED -DNDEBUG -DGNUC -DPOSIX -DCOMPILER_GCC -D_DLL_EXT=.so -D_LINUX -DLINUX -DPOSIX -D_POSIX -DDLLNAME=server -DBINK_VIDEO -DGL_GLEXT_PROTOTYPES -DDX_TO_GL_ABSTRACTION -DUSE_SDL -DDEV_BUILD -DFRAME_POINTER_OMISSION_DISABLED -DGAME_DLL -DVECTOR -DVERSION_SAFE_STEAM_API_INTERFACES -DPROTECTED_THINGS_ENABLE -Dsprintf=use_Q_snprintf_instead_of_sprintf -Dstrncpy=use_Q_strncpy_instead -D_snprintf=use_Q_snprintf_instead -DSWDS -DPORTAL -DHL2_DLL -DHL2_EPISODIC -DUSES_SAVERESTORE -D_EXTERNAL_DLL_EXT=.so -DVPCGAMECAPS=PORTAL -DPROJECTDIR=/home/fvp/Downloads/lemon/src/game/server -D_DLL_EXT=.so -DSOURCE1=1 -DVPCGAME=portal -D_LINUX=1 -D_POSIX=1 -DLINUX=1 -DPOSIX=1 
+DEFINES += -DVPC -DRAD_TELEMETRY_DISABLED -DNDEBUG -DGNUC -DPOSIX -DCOMPILER_GCC -D_DLL_EXT=.so -D_LINUX -DLINUX -DPOSIX -D_POSIX -DDLLNAME=server -DBINK_VIDEO -DGL_GLEXT_PROTOTYPES -DDX_TO_GL_ABSTRACTION -DUSE_SDL -DDEV_BUILD -DFRAME_POINTER_OMISSION_DISABLED -DGAME_DLL -DVECTOR -DVERSION_SAFE_STEAM_API_INTERFACES -DPROTECTED_THINGS_ENABLE -Dsprintf=use_Q_snprintf_instead_of_sprintf -Dstrncpy=use_Q_strncpy_instead -D_snprintf=use_Q_snprintf_instead -DSWDS -DPORTAL -DHL2_DLL -DHL2_EPISODIC -DUSES_SAVERESTORE -D_EXTERNAL_DLL_EXT=.so -DVPCGAMECAPS=PORTAL -DPROJECTDIR=/home/luna/Downloads/lemon/src/game/server -D_DLL_EXT=.so -DSOURCE1=1 -DVPCGAME=portal -D_LINUX=1 -D_POSIX=1 -DLINUX=1 -DPOSIX=1 
 endif
 INCLUDEDIRS += ../../common ../../public ../../public/tier0 ../../public/tier1 ../../thirdparty/SDL2 ../../game/server/generated_proto_portal ../../thirdparty/protobuf-2.3.0/src ./ ../../game/shared ../../utils/common ../../game/shared/econ ../../game/server/NextBot ../../game/shared/portal ./hl2 ./episodic ../../game/shared/Multiplayer ../../game/shared/hl2 ../../game/shared/portal ./portal 
 CONFTYPE=dll
 IMPORTLIBRARY=
-GAMEOUTPUTFILE=/home/fvp/steam/steam/steamapps/sourcemods/mod_portal/bin/server.so
+GAMEOUTPUTFILE=/home/luna/.steam/steam/steamapps/sourcemods/mod_portal/bin/server.so
 OUTPUTFILE=$(OBJ_DIR)/server.so
 
 

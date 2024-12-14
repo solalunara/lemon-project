@@ -1,8 +1,7 @@
 [vpc crc file version 2]
-0731181f /home/luna/Downloads/lemon/src/devtools/bin/vpc_linux
-_Nc_/vpcgame:portal_
-376fee38 client_portal.vpc
-c7ae28fd ../../game/client/client_base.vpc
+0731181f /home/luna/prog/lemon-project/sp/src/devtools/bin/vpc_linux
+_Nc_/vpcgame:valve_
+3ae3f610 serverplugin_empty.vpc
 4832e67a ../../vpc_scripts/source_dll_base.vpc
 d752cf80 ../../vpc_scripts/platform_dirs.vpc
 6c4a5ff1 ../../vpc_scripts/source_base.vpc
@@ -10,5 +9,3 @@ addfdd1d ../../vpc_scripts/source_dll_posix_base.vpc
 486b766d ../../vpc_scripts/version.vpc
 4ef1d688 ../../vpc_scripts/source_posix_base.vpc
 346bda4a ../../vpc_scripts/source_video_base.vpc
-c209a88e ../../vpc_scripts/protobuf_builder.vpc
-d1c158fe ../../game/protobuf_include.vpc

@@ -2309,7 +2309,7 @@ void CPortalSimulator::CreatePolyhedrons( bool update )
 							continue;
 						}
 						CPolyhedron *poly;
-						ASSERT( pConvexes[ i ] );
+						Assert( pConvexes[ i ] );
 						if ( !pConvexes[ i ] )
 							continue;
 						poly = physcollision->PolyhedronFromConvex( pConvexes[ i ], false );
