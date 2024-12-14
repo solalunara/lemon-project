@@ -2,9 +2,11 @@
 *.o
 *.P
 *.map
-*.so
 *.ipch
 *.pdb
 *.db
 *.sdf
 *.a
+
+client.so
+server.so
