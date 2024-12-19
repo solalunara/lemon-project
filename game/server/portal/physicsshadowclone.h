@@ -33,6 +33,8 @@ struct CPhysicsShadowCloneLL
 
 #define FVPHYSICS_IS_SHADOWCLONE 0x4000
 
+void DrawDebugOverlayForShadowClone( CPhysicsShadowClone *pClone );
+
 class CPhysicsShadowClone : public CBaseAnimating
 {
 	DECLARE_CLASS( CPhysicsShadowClone, CBaseAnimating );

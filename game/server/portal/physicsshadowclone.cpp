@@ -1052,7 +1052,7 @@ CPhysicsShadowCloneLL *CPhysicsShadowClone::GetClonesOfEntity( const CBaseEntity
 
 
 
-static void DrawDebugOverlayForShadowClone( CPhysicsShadowClone *pClone )
+void DrawDebugOverlayForShadowClone( CPhysicsShadowClone *pClone )
 {
 	unsigned char iColorIntensity = (pClone->IsInAssumedSyncState())?(127):(255);
 
