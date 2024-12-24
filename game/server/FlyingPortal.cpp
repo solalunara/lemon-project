@@ -19,6 +19,7 @@ BEGIN_DATADESC( CFlyingPortal )
 	DEFINE_FIELD( iLinkageGroup, FIELD_INTEGER ),
 	DEFINE_FIELD( pPhysObject, FIELD_CLASSPTR ),
 	DEFINE_THINKFUNC( FlyThink ),
+	DEFINE_THINKFUNC( KillThink ),
 	DEFINE_USEFUNC( Use )
 END_DATADESC()
 
@@ -76,13 +77,6 @@ void CFlyingPortal::UpdateOnRemove( void )
 	BaseClass::UpdateOnRemove();
 }
 
-void CFlyingPortal::Precache( void )
-{
-	BaseClass::Precache();
-	PrecacheModel( "models/props_bts/rocket.mdl" );
-}
-
-
 void CFlyingPortal::StopLoopingSounds()
 {
 	BaseClass::StopLoopingSounds();
@@ -101,40 +95,6 @@ void CFlyingPortal::Spawn( void )
 	SetCollisionBounds( FLYING_PORTAL_MINS, FLYING_PORTAL_MAXS );
 	CollisionProp()->UseTriggerBounds( true, 4 );
 
-
-/*
-	int surfaceProp = -1;
-	if ( pSolid->surfaceprop[0] )
-	{
-		surfaceProp = physprops->GetSurfaceIndex( pSolid->surfaceprop );
-	}
-	IPhysicsObject *pObject = pPhysEnvironment->CreatePolyObject( pCollide->solids[pSolid->index], surfaceProp, vec3_origin, vec3_angle, &pSolid->params );
-
-	if ( pObject )
-	{
-		if ( modelinfo->GetModelType( modelinfo->GetModel( GetModelIndex() ) ) == 1 )
-		{
-			unsigned int contents = modelinfo->GetModelContents( GetModelIndex() );
-			Assert( contents != 0 );
-			// HACKHACK: contents is used to filter collisions
-			// HACKHACK: So keep solid on for water brushes since they should pass collision rules (as triggers)
-			if ( contents & MASK_WATER )
-			{
-				contents |= CONTENTS_SOLID;
-			}
-			if ( contents != pObject->GetContents() && contents != 0 )
-			{
-				pObject->SetContents( contents );
-				pObject->RecheckCollisionFilter();
-			}
-		}
-
-		g_pPhysSaveRestoreManager->AssociateModel( pObject, GetModelIndex() );
-	}
-
-	pPhysObject = pObject;
-	*/
-
 	pPhysObject = VPhysicsInitNormal( SOLID_VPHYSICS, 0, false );
 	pPhysObject->EnableGravity( false );
 	pPhysObject->EnableCollisions( true );
@@ -142,8 +102,6 @@ void CFlyingPortal::Spawn( void )
 	pPhysObject->EnableDrag( false );
 	Vector inertia = Vector( 1, 10, 10 );
 	pPhysObject->SetInertia( inertia );
-	//pPhysObject->SetGameFlags( FVPHYSICS_WAS_THROWN );
-	VPhysicsSetObject( pPhysObject );
 	pPhysObject->RecheckCollisionFilter();
 
 
@@ -166,7 +124,15 @@ void CFlyingPortal::OnRestore( void )
 
 void CFlyingPortal::FlyThink( void )
 {
-	//PhysicsGameSystem();
+	if ( bHitObject )
+	{
+		VPhysicsDestroyObject();
+		SetTouch( NULL );
+		SetSolid( SOLID_NONE );
+		AddEffects( EF_NODRAW );
+		SetContextThink( &CFlyingPortal::KillThink, gpGlobals->curtime + 2.0f, "FlyThinkContext" );
+		return;
+	}
 	
 	SetContextThink( &CFlyingPortal::FlyThink, gpGlobals->curtime + gpGlobals->frametime * FRAMES_PER_THINK, "FlyThinkContext" );
 	if ( !pPhysObject )
@@ -192,16 +158,16 @@ void CFlyingPortal::FlyThink( void )
 		bHitObject = true;
 	}
 
-	if ( bHitObject && !PhysIsInCallback() )
-	{
-		CPortalSimulator *pSimulator = CPortalSimulator::GetSimulatorThatOwnsEntity( this );
-		if ( pSimulator )
-		{
-			pSimulator->ReleaseOwnershipOfEntity( this );
-		}
-		SetContextThink( NULL, TICK_NEVER_THINK, "FlyThinkContext" );
-		UTIL_Remove( this ); //delete object if hit and not in callback
-	}
+}
+
+void CFlyingPortal::KillThink( void )
+{
+	Assert( !PhysIsInCallback() );
+	CPortalSimulator *pSimulator = CPortalSimulator::GetSimulatorThatOwnsEntity( this );
+	if ( pSimulator )
+		pSimulator->ReleaseOwnershipOfEntity( this );
+	SetContextThink( NULL, TICK_NEVER_THINK, "FlyThinkContext" );
+	UTIL_Remove( this );
 }
 
 void CFlyingPortal::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
@@ -216,13 +182,9 @@ void CFlyingPortal::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE
 
 void CFlyingPortal::StartTouch( CBaseEntity *pOther )
 {
-	Msg( "Classic collision with " );
-	Msg( pOther->GetClassname() );
-	Msg( "\n" );
 	if ( FClassnameIs( pOther, "trigger_portal_cleanser" ) )
 	{
 		CBaseTrigger *pTrigger = static_cast<CBaseTrigger*>( pOther );
-		Msg( "portal hit portal cleanser\n" );
 
 		if ( pTrigger && !pTrigger->m_bDisabled )
 		{
@@ -253,10 +215,6 @@ void CFlyingPortal::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent 
 		iNumBounces++;
 
 
-	Msg( "Vphysics collision with " );
-	Msg( pOther->GetClassname() );
-	Msg( "\n" );
-
 	if ( pOther->IsPlayer() )
 		return;
 
@@ -281,7 +239,6 @@ void CFlyingPortal::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent 
 	if ( FClassnameIs( pOther, "trigger_portal_cleanser" ) )
 	{
 		CBaseTrigger *pTrigger = static_cast<CBaseTrigger*>( pOther );
-		Msg( "portal hit portal cleanser\n" );
 
 		if ( pTrigger && !pTrigger->m_bDisabled )
 		{
@@ -329,7 +286,7 @@ void CFlyingPortal::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent 
 	pPortal->m_vDelayedPosition = Origin;
 
 
-	pPortal->PlacePortal( pPortal->m_vDelayedPosition, pPortal->m_qDelayedAngles, fSuccess );
+	pPortal->PlacePortal( pPortal->m_vDelayedPosition, pPortal->m_qDelayedAngles, fSuccess, true );
 
 	pPortal->m_hPlacedBy = this;
 	pPortal->SetContextThink( &CProp_Portal::PlacementThink, gpGlobals->curtime, s_pDelayedPlacementContext );

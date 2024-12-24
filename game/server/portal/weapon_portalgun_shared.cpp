@@ -64,6 +64,7 @@ void CWeaponPortalgun::Precache()
 
 	PrecacheModel( "models/portals/portal1.mdl" );
 	PrecacheModel( "models/portals/portal2.mdl" );
+	PrecacheModel( "models/props_bts/rocket.mdl" ); //for flying portal
 
 	PrecacheScriptSound( "Portal.ambient_loop" );
 

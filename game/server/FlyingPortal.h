@@ -19,7 +19,6 @@ public:
 	static CFlyingPortal	*Create( Vector vStartPos, Vector vDirection, float fSpeed, int iLinkageGroup, bool bPortal2 );
 
 	virtual void			UpdateOnRemove( void );
-	virtual void			Precache( void );
 	virtual void			StopLoopingSounds( void );
 	virtual void			Spawn( void );
 	virtual void			Activate( void );
@@ -35,6 +34,7 @@ public:
 	}
 
 	void					FlyThink( void );
+	void					KillThink( void );
 
 	CNetworkVar( float, fMoveDist );
 	CNetworkVar( int, iLinkageGroup );

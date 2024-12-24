@@ -952,6 +952,9 @@ CPhysicsShadowClone *CPhysicsShadowClone::CreateShadowClone( IPhysicsEnvironment
 	if( pClonedEntity->GetFlags() & (FL_WORLDBRUSH | FL_STATICPROP) )
 		return NULL;
 
+	if( FClassnameIs( pClonedEntity, "flying_portal" ) )
+		return NULL; //Don't clone portalgun projectiles
+
 	/*if( FClassnameIs( pClonedEntity, "func_door" ) )
 	{
 		//only clone func_door's that are in front of the portal
