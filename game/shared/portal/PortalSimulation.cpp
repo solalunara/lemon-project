@@ -18,6 +18,7 @@
 #include "tier1/callqueue.h"
 
 #ifndef CLIENT_DLL
+#define DEBUG_PORTAL_COLLISION_ENVIRONMENTS
 
 #include "world.h"
 #include "portal_player.h" //TODO: Move any portal mod specific code to callback functions or something
@@ -27,11 +28,11 @@
 #include "isaverestore.h"
 #include "hierarchy.h"
 #include "env_debughistory.h"
-#include "debugoverlay_shared.h"
 
 #else
 
 #include "c_world.h"
+#include "debugoverlay_shared.h"
 
 #endif
 
@@ -225,7 +226,10 @@ CPortalSimulator::~CPortalSimulator( void )
 void CPortalSimulator::UpdatePortalHole()
 {
 	if( m_InternalData.Placement.pHoleShapeCollideable )
+	{
+		m_InternalData.Placement.pHolePolyhedron->Release();
 		physcollision->DestroyCollide( m_InternalData.Placement.pHoleShapeCollideable );
+	}
 
 	float fHolePlanes[6*4];
 
@@ -264,10 +268,11 @@ void CPortalSimulator::UpdatePortalHole()
 	fHolePlanes[(5*4) + 2] = m_InternalData.Placement.vRight.z;
 	fHolePlanes[(5*4) + 3] = m_InternalData.Placement.vRight.Dot( m_InternalData.Placement.ptCenter + (m_InternalData.Placement.vRight * (PORTAL_HALF_WIDTH * 0.98f)) );
 
-	CPolyhedron *pPolyhedron = GeneratePolyhedronFromPlanes( fHolePlanes, 6, PORTAL_POLYHEDRON_CUT_EPSILON, true );
+	CPolyhedron *pPolyhedron = GeneratePolyhedronFromPlanes( fHolePlanes, 6, PORTAL_POLYHEDRON_CUT_EPSILON, false );
 	Assert( pPolyhedron != NULL );
 	CPhysConvex *pConvex = physcollision->ConvexFromConvexPolyhedron( *pPolyhedron );
-	pPolyhedron->Release();
+	//pPolyhedron->Release();
+	m_InternalData.Placement.pHolePolyhedron = pPolyhedron;
 	Assert( pConvex != NULL );
 	m_InternalData.Placement.pHoleShapeCollideable = physcollision->ConvertConvexToCollide( &pConvex, 1 );
 }
@@ -561,7 +566,7 @@ bool CPortalSimulator::EntityIsInPortalHole( CBaseEntity *pEntity ) const
 		return false;
 
 	case SOLID_BSP:
-		Msg( "BSP Solid - I don't know how to handle this!" );
+		Msg( "BSP Solid - I don't know how to handle this!\n" );
 		return false;
 	default:
 		Assert( false ); //make a handler
@@ -790,14 +795,14 @@ void CPortalSimulator::TakeOwnershipOfEntity( CBaseEntity *pEntity )
 	if( pEntity->IsWorld() )
 		return;
 	
+	if ( pEntity->GetSolid() == SOLID_BSP )
+		return;
+	
 	if( CPhysicsShadowClone::IsShadowClone( pEntity ) )
 		return;
 
 	if( pEntity->GetServerVehicle() != NULL ) //we don't take kindly to vehicles in these here parts. Their physics controllers currently don't migrate properly and cause a crash
 		return;
-
-	if ( FClassnameIs( pEntity, "func_door" ) )
-		return; //func_doors crash the game for some reason? idk
 
 	if( OwnsEntity( pEntity ) )
 		return;
@@ -1302,7 +1307,6 @@ void CPortalSimulator::CreateMinimumPhysics( void )
 }
 
 
-extern bool PhysIsInCallback();
 
 void CPortalSimulator::CreateLocalPhysics( bool update )
 {
@@ -1343,8 +1347,7 @@ void CPortalSimulator::CreateLocalPhysics( bool update )
 			if( (m_InternalData.Simulation.pCollisionEntity != NULL) && (m_InternalData.Simulation.pCollisionEntity->VPhysicsGetObject() == NULL) )
 				m_InternalData.Simulation.pCollisionEntity->VPhysicsSetObject(m_InternalData.Simulation.Static.World.Brushes.pPhysicsObject);
 
-			if ( !PhysIsInCallback() )
-				m_InternalData.Simulation.Static.World.Brushes.pPhysicsObject->RecheckCollisionFilter(); //some filters only work after the variable is stored in the class
+			m_InternalData.Simulation.Static.World.Brushes.pPhysicsObject->RecheckCollisionFilter(); //some filters only work after the variable is stored in the class
 		}
 
 		//Assert( m_InternalData.Simulation.Static.World.StaticProps.PhysicsObjects.Count() == 0 ); //Be sure to find graceful fixes for asserts, performance is a big concern with portal simulation
@@ -1367,8 +1370,7 @@ void CPortalSimulator::CreateLocalPhysics( bool update )
 				Representation.pPhysicsObject = m_InternalData.Simulation.pPhysicsEnvironment->CreatePolyObjectStatic( Representation.pCollide, Representation.iTraceSurfaceProps, vec3_origin, vec3_angle, &params );
 				Assert( Representation.pPhysicsObject != NULL );
 
-				if ( !PhysIsInCallback() )	
-					Representation.pPhysicsObject->RecheckCollisionFilter(); //some filters only work after the variable is stored in the class
+				Representation.pPhysicsObject->RecheckCollisionFilter(); //some filters only work after the variable is stored in the class
 			}
 		}
 		m_InternalData.Simulation.Static.World.StaticProps.bPhysicsExists = true;
@@ -1400,8 +1402,7 @@ void CPortalSimulator::CreateLocalPhysics( bool update )
 				if( (m_InternalData.Simulation.pCollisionEntity != NULL) && (m_InternalData.Simulation.pCollisionEntity->VPhysicsGetObject() == NULL) )
 					m_InternalData.Simulation.pCollisionEntity->VPhysicsSetObject(m_InternalData.Simulation.Static.World.Brushes.pPhysicsObject);
 
-				if ( !PhysIsInCallback() )	
-					m_InternalData.Simulation.Static.Wall.Local.Brushes.pPhysicsObject->RecheckCollisionFilter(); //some filters only work after the variable is stored in the class
+				m_InternalData.Simulation.Static.Wall.Local.Brushes.pPhysicsObject->RecheckCollisionFilter(); //some filters only work after the variable is stored in the class
 			}
 			else if ( m_InternalData.Parent )
 			{
@@ -1425,18 +1426,17 @@ void CPortalSimulator::CreateLocalPhysics( bool update )
 					Vector vParentOrigin = m_InternalData.Parent->GetAbsOrigin();
 					QAngle angParentAngles = m_InternalData.Parent->GetAbsAngles();
 					m_InternalData.Simulation.Static.Wall.Local.Tube.pPhysicsObject = m_InternalData.Simulation.pPhysicsEnvironment->CreatePolyObject( m_InternalData.Simulation.Static.Wall.Local.Tube.pCollideable, m_InternalData.Simulation.Static.SurfaceProperties.surface.surfaceProps, vec3_origin, vec3_angle, &params );
+					m_InternalData.Simulation.Static.Wall.Local.Tube.pPhysicsObject->SetPosition( vParentOrigin, angParentAngles, false );
 					m_InternalData.Simulation.Static.Wall.Local.Tube.pPhysicsObject->SetShadow( 1e4, 1e4, false, false );
 					m_InternalData.Simulation.Static.Wall.Local.Tube.pPhysicsObject->UpdateShadow( vParentOrigin, angParentAngles, true, 0 );
 					IPhysicsShadowController *c = m_InternalData.Simulation.Static.Wall.Local.Tube.pPhysicsObject->GetShadowController();
 					//c->SetPhysicallyControlled( true );
-					m_InternalData.Simulation.Static.Wall.Local.Tube.pPhysicsObject->SetPosition( vParentOrigin, angParentAngles, false );
 				}
 
 				if( (m_InternalData.Simulation.pCollisionEntity != NULL) && (m_InternalData.Simulation.pCollisionEntity->VPhysicsGetObject() == NULL) )
 					m_InternalData.Simulation.pCollisionEntity->VPhysicsSetObject(m_InternalData.Simulation.Static.World.Brushes.pPhysicsObject);
 
-				if ( !PhysIsInCallback() )
-					m_InternalData.Simulation.Static.Wall.Local.Tube.pPhysicsObject->RecheckCollisionFilter(); //some filters only work after the variable is stored in the class
+				m_InternalData.Simulation.Static.Wall.Local.Tube.pPhysicsObject->RecheckCollisionFilter(); //some filters only work after the variable is stored in the class
 			}
 			else if ( m_InternalData.Parent )
 			{
@@ -1499,8 +1499,7 @@ void CPortalSimulator::CreateLinkedPhysics( bool update )
 	if( RemoteSimulationStaticWorld.Brushes.pCollideable != NULL )
 	{
 		m_InternalData.Simulation.Static.Wall.RemoteTransformedToLocal.Brushes.pPhysicsObject = m_InternalData.Simulation.pPhysicsEnvironment->CreatePolyObjectStatic( RemoteSimulationStaticWorld.Brushes.pCollideable, m_pLinkedPortal->m_InternalData.Simulation.Static.SurfaceProperties.surface.surfaceProps, m_InternalData.Placement.ptaap_LinkedToThis.ptOriginTransform, m_InternalData.Placement.ptaap_LinkedToThis.qAngleTransform, &params );
-		if ( !PhysIsInCallback() )
-			m_InternalData.Simulation.Static.Wall.RemoteTransformedToLocal.Brushes.pPhysicsObject->RecheckCollisionFilter(); //some filters only work after the variable is stored in the class
+		m_InternalData.Simulation.Static.Wall.RemoteTransformedToLocal.Brushes.pPhysicsObject->RecheckCollisionFilter(); //some filters only work after the variable is stored in the class
 	}
 	
 
@@ -1514,8 +1513,7 @@ void CPortalSimulator::CreateLinkedPhysics( bool update )
 			if( pPhysObject )
 			{
 				m_InternalData.Simulation.Static.Wall.RemoteTransformedToLocal.StaticProps.PhysicsObjects.AddToTail( pPhysObject );
-				if ( !PhysIsInCallback() )
-					pPhysObject->RecheckCollisionFilter(); //some filters only work after the variable is stored in the class
+				pPhysObject->RecheckCollisionFilter(); //some filters only work after the variable is stored in the class
 			}
 		}
 	}
@@ -2322,7 +2320,8 @@ void CPortalSimulator::CreatePolyhedrons( bool update )
 		int iWallClippedPolyhedronCount = 0;
 		if( IsSimulatingVPhysics() ) //if not simulating vphysics, we skip making the entire wall, and just create the minimal tube instead
 		{
-			enginetrace->GetBrushesInAABB( vAABBMins, vAABBMaxs, &WallBrushes, MASK_SOLID_BRUSHONLY );
+			if ( !m_InternalData.Parent )
+				enginetrace->GetBrushesInAABB( vAABBMins, vAABBMaxs, &WallBrushes, MASK_SOLID_BRUSHONLY );
 
 			if( WallBrushes.Count() != 0 )
 				ConvertBrushListToClippedPolyhedronList( WallBrushes.Base(), WallBrushes.Count(), fPlanes, 1, PORTAL_POLYHEDRON_CUT_EPSILON, &WallBrushPolyhedrons_ClippedToWall );
@@ -2642,6 +2641,11 @@ void CPortalSimulator::SetVPhysicsSimulationEnabled( bool bEnabled )
 
 ConVar r_draw_tube ( "r_draw_tube", "0" );
 ConVar r_draw_wall ( "r_draw_wall", "0" );
+ConVar r_draw_world ( "r_draw_world", "0" );
+ConVar r_draw_shadowclones ( "r_draw_shadowclones", "0" );
+ConVar r_draw_holeshape ( "r_draw_holeshape", "0" );
+ConVar r_draw_staticprops ( "r_draw_staticprops", "0" );
+ConVar r_draw_collision ( "r_draw_collision", "0" );
 
 #ifndef CLIENT_DLL
 void CPortalSimulator::PrePhysFrame( void )
@@ -2656,13 +2660,29 @@ void CPortalSimulator::PrePhysFrame( void )
 		{
 			CPortalSimulator *pSimulator = pAllSimulators[i];
 
-			Color c( 1, 1, 1 );
+			Color c_tube( 255, 0, 0 );
+			Color c_wall( 0, 255, 0 );
+			Color c_world( 255, 255, 255 );
 			if ( r_draw_tube.GetBool() )
 				for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Static.Wall.Local.Tube.Polyhedrons.Count(); ++i )
-					DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.Wall.Local.Tube.Polyhedrons[ i ], c, pSimulator->m_InternalData.Parent );
+					DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.Wall.Local.Tube.Polyhedrons[ i ], c_tube, pSimulator->m_InternalData.Parent );
 			if ( r_draw_wall.GetBool() )
 				for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Static.Wall.Local.Brushes.Polyhedrons.Count(); ++i )
-					DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.Wall.Local.Brushes.Polyhedrons[ i ], c, pSimulator->m_InternalData.Parent );
+					DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.Wall.Local.Brushes.Polyhedrons[ i ], c_wall, pSimulator->m_InternalData.Parent );
+			if ( r_draw_world.GetBool() )
+				for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Static.World.Brushes.Polyhedrons.Count(); ++i )
+					DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.World.Brushes.Polyhedrons[ i ], c_world, NULL );
+			if ( r_draw_staticprops.GetBool() )
+				for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Static.World.StaticProps.Polyhedrons.Count(); ++i )
+					DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.World.StaticProps.Polyhedrons[ i ], c_world, NULL );
+			if ( r_draw_holeshape.GetBool() )
+				DrawPolyhedronWireframe( pSimulator->m_InternalData.Placement.pHolePolyhedron, c_world, NULL );
+#ifndef CLIENT_DLL
+			if ( r_draw_shadowclones.GetBool() )
+				for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Dynamic.ShadowClones.FromLinkedPortal.Count(); ++i )
+					DrawDebugOverlayForShadowClone( pSimulator->m_InternalData.Simulation.Dynamic.ShadowClones.FromLinkedPortal[ i ] );
+#endif
+					
 
 			if( !pSimulator->IsReadyToSimulate() )
 				continue;
@@ -3258,7 +3278,6 @@ bool CPSCollisionEntity::IsPortalSimulatorCollisionEntity( const CBaseEntity *pE
 }
 #endif //#ifndef CLIENT_DLL
 
-#define DEBUG_PORTAL_COLLISION_ENVIRONMENTS
 #ifdef DEBUG_PORTAL_COLLISION_ENVIRONMENTS
 
 #include "filesystem.h"

@@ -42,8 +42,7 @@
 #define MAXIMUM_PORTAL_EXIT_VELOCITY 1000.0f
 #define NEW_PORTAL_LIMIT 10
 #define UPDATE_PORTAL_THINK_TIME gpGlobals->frametime
-#define PORTAL_TELEPORT_TIME 1
-#define CREATE_PHYSICS_TIME gpGlobals->framecount % 20 == 0
+#define PORTAL_TELEPORT_TIME 1 
 #define PORTAL_HACK_SHOVE_AMOUNT 0
 
 CCallQueue *GetPortalCallQueue();
@@ -1013,6 +1012,7 @@ bool CProp_Portal::ShouldTeleportTouchingEntity( CBaseEntity *pOther )
 	// Test for entity's center being past portal plane
 	if(m_PortalSimulator.m_DataAccess.Placement.PortalPlane.m_Normal.Dot( ptOtherCenter ) < m_PortalSimulator.m_DataAccess.Placement.PortalPlane.m_Dist)
 	{
+		Vector vRelativeVelocity = pOther->GetAbsVelocity() - getPortalVelocity();
 		//entity wants to go further into the plane
 		if( m_PortalSimulator.EntityIsInPortalHole( pOther ) )
 		{
@@ -1087,7 +1087,6 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 	
 	QAngle qOtherAngles;
 	Vector vOtherVelocity;
-	Vector vThisVelocity;
 
 	//grab current velocity
 	{
@@ -1127,7 +1126,6 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 			}
 		}
 	}
-	vThisVelocity = getPortalVelocity();
 
 	const PS_InternalData_t &RemotePortalDataAccess = m_hLinkedPortal->m_PortalSimulator.m_DataAccess;
 	const PS_InternalData_t &LocalPortalDataAccess = m_PortalSimulator.m_DataAccess;
@@ -1140,9 +1138,9 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 		pOtherAsPlayer->m_bFixEyeAnglesFromPortalling = true;
 		pOtherAsPlayer->m_matLastPortalled = m_matrixThisToLinked;
 		bNonPhysical = true;
-		if( (fabs( RemotePortalDataAccess.Placement.vForward.z ) + fabs( LocalPortalDataAccess.Placement.vForward.z )) > 0.7071f ) //some combination of floor/ceiling
+		//if( (fabs( RemotePortalDataAccess.Placement.vForward.z ) + fabs( LocalPortalDataAccess.Placement.vForward.z )) > 0.7071f ) //some combination of floor/ceiling
 		// 0.0f is not enough tolerance for moving portals, increasing to .1f
-		if( fabs( LocalPortalDataAccess.Placement.vForward.z ) > 0.0f )
+		if( fabs( LocalPortalDataAccess.Placement.vForward.z ) > 0.1f )
 		{
 			//we may have to compensate for the fact that AABB's don't rotate ever
 			
@@ -1269,28 +1267,31 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 #endif
 	//velocity hacks
 	{
+		Vector vRelativeVelocity = vNewVelocity - m_hLinkedPortal->getPortalVelocity();
 		//minimum floor exit velocity if both portals are on the floor or the player is coming out of the floor
+		int iVelSign = Sign( RemotePortalDataAccess.Placement.vForward.z );
 		if( RemotePortalDataAccess.Placement.vForward.z > 0.7071f )
 		{
 			if ( bPlayer )
 			{
-				if( vNewVelocity.z < MINIMUM_FLOOR_PORTAL_EXIT_VELOCITY_PLAYER ) 
-					vNewVelocity.z = MINIMUM_FLOOR_PORTAL_EXIT_VELOCITY_PLAYER;
+				if( vRelativeVelocity.z < MINIMUM_FLOOR_PORTAL_EXIT_VELOCITY_PLAYER ) 
+					vRelativeVelocity.z = MINIMUM_FLOOR_PORTAL_EXIT_VELOCITY_PLAYER;
 			}
 			else
 			{
 				if( LocalPortalDataAccess.Placement.vForward.z > 0.7071f )
 				{
-					if( vNewVelocity.z < MINIMUM_FLOOR_TO_FLOOR_PORTAL_EXIT_VELOCITY ) 
-						vNewVelocity.z = MINIMUM_FLOOR_TO_FLOOR_PORTAL_EXIT_VELOCITY;
+					if( vRelativeVelocity.z < MINIMUM_FLOOR_TO_FLOOR_PORTAL_EXIT_VELOCITY ) 
+						vRelativeVelocity.z = MINIMUM_FLOOR_TO_FLOOR_PORTAL_EXIT_VELOCITY;
 				}
 				else
 				{
-					if( vNewVelocity.z < MINIMUM_FLOOR_PORTAL_EXIT_VELOCITY )
-						vNewVelocity.z = MINIMUM_FLOOR_PORTAL_EXIT_VELOCITY;
+					if( vRelativeVelocity.z < MINIMUM_FLOOR_PORTAL_EXIT_VELOCITY )
+						vRelativeVelocity.z = MINIMUM_FLOOR_PORTAL_EXIT_VELOCITY;
 				}
 			}
 		}
+		vNewVelocity = vRelativeVelocity + m_hLinkedPortal->getPortalVelocity();
 	}
 
 	//untouch the portal(s), will force a touch on destination after the teleport
@@ -1317,15 +1318,8 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 #endif
 
 	//HACK: if one of the portals is moving shove the player out of it
-	if ( bPlayer && ( getPortalVelocity() != vec3_origin || m_hLinkedPortal->getPortalVelocity() != vec3_origin ) )
-	{
-		ptNewOrigin += RemotePortalDataAccess.Placement.PortalPlane.m_Normal * ( vNewVelocity.Length() * gpGlobals->frametime * PORTAL_HACK_SHOVE_AMOUNT );
-	}
-	//HACK: if both of the portals are moving shove non-player objects out
-	else if ( getPortalVelocity() != vec3_origin && m_hLinkedPortal->getPortalVelocity() != vec3_origin )
-	{
-		ptNewOrigin += RemotePortalDataAccess.Placement.PortalPlane.m_Normal * ( vNewVelocity.Length() * gpGlobals->frametime * PORTAL_HACK_SHOVE_AMOUNT );
-	}
+	//if ( bPlayer && m_hLinkedPortal->getPortalVelocity().Dot( RemotePortalDataAccess.Placement.vForward ) < -0.7071f )
+	//	ptNewOrigin += RemotePortalDataAccess.Placement.PortalPlane.m_Normal * ( vNewVelocity.Length() * gpGlobals->frametime * PORTAL_HACK_SHOVE_AMOUNT );
 
 	//do the actual teleportation
 	{
@@ -1341,8 +1335,8 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 			
 			pOtherAsPlayer->pl.v_angle = qTransformedEyeAngles;
 			pOtherAsPlayer->pl.fixangle = FIXANGLE_ABSOLUTE;
-			pOtherAsPlayer->UpdateVPhysicsPosition( ptNewOrigin, vNewVelocity, 0.0f );
-			pOtherAsPlayer->Teleport( &ptNewOrigin, &qNewAngles, &vNewVelocity );
+			pOtherAsPlayer->UpdateVPhysicsPosition( ptNewOrigin, vec3_origin, 0.0f );
+			pOtherAsPlayer->Teleport( &ptNewOrigin, &qNewAngles, &vec3_origin );
 
 			//modify the velocity, with base as base and non-base as local
 			//pOtherAsPlayer->SetLocalVelocity( vNewVelocity );
@@ -1359,7 +1353,6 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 				//doing velocity in two stages as a bug workaround, setting the velocity to anything other than 0 will screw up how objects rest on this entity in the future
 				pOther->Teleport( &ptNewOrigin, &qNewAngles, &vec3_origin );
 				//pOther->SetBaseVelocity( vNewVelocityBase );
-				//pOther->SetLocalVelocity( vNewVelocity );
 				pOther->ApplyAbsVelocityImpulse( vNewVelocity );
 			}
 		}
@@ -1827,6 +1820,14 @@ void CProp_Portal::ForceEntityToFitInPortalWall( CBaseEntity *pEntity )
 
 	Vector ptDest;
 
+	Vector vCollideOrigin = vec3_origin;
+	QAngle qCollideAngle = vec3_angle;
+	if ( m_PortalSimulator.m_DataAccess.Parent )
+	{
+		vCollideOrigin = m_PortalSimulator.m_DataAccess.Parent->GetAbsOrigin();
+		qCollideAngle = m_PortalSimulator.m_DataAccess.Parent->GetAbsAngles();
+	}
+
 	if ( m_PortalSimulator.IsReadyToSimulate() )
 	{
 		Ray_t ray;
@@ -1837,7 +1838,7 @@ void CProp_Portal::ForceEntityToFitInPortalWall( CBaseEntity *pEntity )
 
 		if( m_PortalSimulator.m_DataAccess.Simulation.Static.Wall.Local.Brushes.pCollideable )
 		{
-			physcollision->TraceBox( ray, m_PortalSimulator.m_DataAccess.Simulation.Static.Wall.Local.Brushes.pCollideable, vec3_origin, vec3_angle, &ShortestTrace );
+			physcollision->TraceBox( ray, m_PortalSimulator.m_DataAccess.Simulation.Static.Wall.Local.Brushes.pCollideable, vCollideOrigin, qCollideAngle, &ShortestTrace );
 		}
 
 		/*if( pEnvironment->LocalCollide.pWorldCollide )
