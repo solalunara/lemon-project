@@ -79,7 +79,7 @@ PRECACHE_WEAPON_REGISTER(weapon_portalgun);
 extern ConVar sv_portal_placement_debug;
 extern ConVar sv_portal_placement_never_fail;
 //default (pre-mod) is 3000
-ConVar sv_portal_blast_speed( "sv_portal_blast_speed", "1000.0f", FCVAR_NOTIFY, "Portalgun Blast Speed", true, 0.0f, false, 3000.0f );
+ConVar sv_portal_blast_speed( "sv_portal_blast_speed", "3000.0f", FCVAR_NOTIFY, "Portalgun Blast Speed", true, 0.0f, false, 6000.0f );
 ConVar sv_increase_blast_speed( "+plusblastspeed", "0", FCVAR_NONE, "increases blast speed" );
 ConVar sv_decrease_blast_speed( "+minusblastspeed", "0", FCVAR_NONE, "decreases blast speed" );
 ConVar sv_stop_increase_blast_speed( "-plusblastspeed", "0", FCVAR_NONE, "stops increasing blast speed" );

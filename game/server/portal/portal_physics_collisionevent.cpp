@@ -154,9 +154,13 @@ int CPortal_CollisionEvent::ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject
 						if( pEntities[i]->IsWorld() )
 						{
 							Assert( CPortalSimulator::GetSimulatorThatCreatedPhysicsObject( pPhysObjects[i] ) == NULL );
+							//HACK: if we have a relative entity, only don't collide w/ world if not in portal hole
+							// this allows a box/phys obj to fall off a block with a portal on it and collide with the world while still in the portal environment
+							// may have to find a better fix for this if something comes up in playtesting
+							if ( !pSimulators[ j ]->m_DataAccess.Parent || pSimulators[ j ]->EntityIsInPortalHole( pEntities[ j ] ) ) 
 							if ( pSimulator_Entity /*&& !PortalStuck*/ )
 							{
-									return 0;
+								return 0;
 							}
 						}
 						else
