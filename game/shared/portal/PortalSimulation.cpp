@@ -18,7 +18,6 @@
 #include "tier1/callqueue.h"
 
 #ifndef CLIENT_DLL
-#define DEBUG_PORTAL_COLLISION_ENVIRONMENTS
 
 #include "world.h"
 #include "portal_player.h" //TODO: Move any portal mod specific code to callback functions or something
@@ -2675,8 +2674,6 @@ void CPortalSimulator::PrePhysFrame( void )
 			if ( r_draw_staticprops.GetBool() )
 				for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Static.World.StaticProps.Polyhedrons.Count(); ++i )
 					DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.World.StaticProps.Polyhedrons[ i ], c_world, NULL );
-			if ( r_draw_holeshape.GetBool() )
-				DrawPolyhedronWireframe( pSimulator->m_InternalData.Placement.pHolePolyhedron, c_world, NULL );
 #ifndef CLIENT_DLL
 			if ( r_draw_shadowclones.GetBool() )
 				for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Dynamic.ShadowClones.FromLinkedPortal.Count(); ++i )

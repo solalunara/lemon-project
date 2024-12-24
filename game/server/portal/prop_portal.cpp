@@ -92,6 +92,7 @@ BEGIN_DATADESC( CProp_Portal )
 	DEFINE_THINKFUNC( FindRelativeEntityThink ),
 	DEFINE_THINKFUNC( UpdatePortalThink ),
 	DEFINE_THINKFUNC( FizzleThink ),
+	DEFINE_THINKFUNC( RelativeEntityCollisionReenable ),
 
 	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "SetActivatedState", InputSetActivatedState ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "Fizzle", InputFizzle ),
@@ -122,6 +123,7 @@ CProp_Portal::CProp_Portal( void )
 	m_bPortalStuck = false;
 	m_bPortalVeryStuck = false;
 	m_vPrevForward = Vector( 0.0f, 0.0f, 0.0f );
+	m_iLinkedRelativeEntityCollisionGroupSave = 0;
 	m_PortalSimulator.SetPortalSimulatorCallbacks( this );
 
 	// Init to something safe
@@ -390,6 +392,15 @@ void CProp_Portal::findParent( void )
 		m_hRelativeEntity.Set( tr.m_pEnt );
 
 		m_PortalSimulator.SetParent( tr.m_pEnt );
+	}
+}
+
+void CProp_Portal::RelativeEntityCollisionReenable( void )
+{
+	Assert( m_pLinkedRelativeEntitySave );
+	if ( m_pLinkedRelativeEntitySave.Get() ) //still same status
+	{
+		m_pLinkedRelativeEntitySave->SetCollisionGroup( m_iLinkedRelativeEntityCollisionGroupSave );
 	}
 }
 
@@ -1335,8 +1346,18 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 			
 			pOtherAsPlayer->pl.v_angle = qTransformedEyeAngles;
 			pOtherAsPlayer->pl.fixangle = FIXANGLE_ABSOLUTE;
-			pOtherAsPlayer->UpdateVPhysicsPosition( ptNewOrigin, vec3_origin, 0.0f );
-			pOtherAsPlayer->Teleport( &ptNewOrigin, &qNewAngles, &vec3_origin );
+			pOtherAsPlayer->UpdateVPhysicsPosition( ptNewOrigin, vNewVelocity, 0.0f );
+			pOtherAsPlayer->Teleport( &ptNewOrigin, &qNewAngles, &vNewVelocity );
+
+
+			if ( RemotePortalDataAccess.Parent )
+			{
+				m_iLinkedRelativeEntityCollisionGroupSave = RemotePortalDataAccess.Parent->GetCollisionGroup();
+				m_pLinkedRelativeEntitySave = RemotePortalDataAccess.Parent;
+				RemotePortalDataAccess.Parent->SetCollisionGroup( COLLISION_GROUP_PASSABLE_DOOR );
+				SetContextThink( &CProp_Portal::RelativeEntityCollisionReenable, gpGlobals->curtime + 10 * gpGlobals->frametime, s_pRelativeEntityCollisionReenable );
+			}
+		
 
 			//modify the velocity, with base as base and non-base as local
 			//pOtherAsPlayer->SetLocalVelocity( vNewVelocity );

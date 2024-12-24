@@ -19,6 +19,7 @@
 
 static const char *s_pDelayedPlacementContext = "DelayedPlacementContext";
 static const char *s_pFindRelativeEntityContext = "TestRestingSurfaceContext";
+static const char *s_pRelativeEntityCollisionReenable = "RelativeEntityCollisionReenable";
 static const char *s_pFizzleThink = "FizzleThink";
 
 class CPhysicsCloneArea;
@@ -95,6 +96,7 @@ public:
 	Vector					getPortalVelocity( void );
 	void					detectMove();
 	void					findParent();
+	void					RelativeEntityCollisionReenable();
 	bool					HasParent( void ) { return m_hRelativeEntity != NULL; }
 	void					RecursiveMoveForward( int iMaxTimes );
 
@@ -156,6 +158,9 @@ private:
 public:
 	inline unsigned char	GetLinkageGroup( void ) const { return m_iLinkageGroupID; };
 	void					ChangeLinkageGroup( unsigned char iLinkageGroupID );
+
+	int						m_iLinkedRelativeEntityCollisionGroupSave;
+	EHANDLE					m_pLinkedRelativeEntitySave;
 
 	//find a portal with the designated attributes, or creates one with them, favors active portals over inactive
 	static CProp_Portal		*FindPortal( unsigned char iLinkageGroupID, bool bPortal2, bool bCreateIfNothingFound = false );
