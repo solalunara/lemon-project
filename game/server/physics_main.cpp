@@ -33,6 +33,7 @@
 #include "vphysicsupdateai.h"
 #include "tier0/vcrmode.h"
 #include "pushentity.h"
+#include "PortalSimulation.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -235,6 +236,18 @@ bool CPhysicsPushedEntities::SpeculativelyCheckPush( PhysicsPushedInfo_t &info, 
 	if ( pBlocker->GetGroundEntity() && pBlocker->GetGroundEntity()->GetRootMoveParent() == m_rgPusher[0].m_pEntity )
 	{
 		info.m_bPusherIsGround = true;
+	}
+
+	//HACK: because portals can be on push movers, the player can end up coming out of a portal and into the trace,
+	// but the expected behaviour would be that the portal prevents the player from being pushed by the pusher
+	// this is only relevant for the player because her world center is within the pusher after teleportation,
+	// unlike most physics objects
+	if ( pBlocker->IsPlayer() )
+	{
+		CPortalSimulator *pSim = NULL;
+		if ( pSim = CPortalSimulator::GetSimulatorThatOwnsEntity( pBlocker ) )
+			if ( pSim->EntityIsInPortalHole( pBlocker ) )
+				return true;
 	}
 
 	bool bIsUnblockable = (m_bIsUnblockableByPlayer && (pBlocker->IsPlayer() || pBlocker->MyNPCPointer())) ? true : false;
