@@ -19,8 +19,7 @@ BEGIN_DATADESC( CFlyingPortal )
 	DEFINE_FIELD( iLinkageGroup, FIELD_INTEGER ),
 	DEFINE_FIELD( pPhysObject, FIELD_CLASSPTR ),
 	DEFINE_THINKFUNC( FlyThink ),
-	DEFINE_THINKFUNC( KillThink ),
-	DEFINE_USEFUNC( Use )
+	DEFINE_THINKFUNC( KillThink )
 END_DATADESC()
 
 IMPLEMENT_SERVERCLASS_ST( CFlyingPortal, DT_FlyingPortal )
@@ -46,14 +45,14 @@ CFlyingPortal *CFlyingPortal::Create( Vector vStartPos, Vector vDirection, float
 	QAngle Angles;
 	VectorAngles( vDirection, Angles );
 	CFlyingPortal *pPortal = static_cast<CFlyingPortal *>( BaseClass::Create( "flying_portal", vStartPos, Angles ) );
-	pPortal->pPhysObject->SetPosition( vStartPos, Angles, true );
 	pPortal->qAngles = Angles;
 	pPortal->vVelocity = vDirection.Normalized() * fSpeed;
-	pPortal->pPhysObject->SetVelocity( &pPortal->vVelocity, NULL );
+	pPortal->ApplyAbsVelocityImpulse( pPortal->vVelocity );
 	pPortal->iLinkageGroup = iLinkageGroup;
 	pPortal->bPortal2 = bPortal2;
 	pPortal->SetContextThink( &CFlyingPortal::FlyThink, gpGlobals->curtime, "FlyThinkContext" );
 	pPortal->SetCollisionGroup( COLLISION_GROUP_PUSHAWAY );
+	pPortal->pPhysObject->RecheckCollisionFilter();
 
 
 	byte r = bPortal2 ? 255 : 10;
@@ -84,16 +83,11 @@ void CFlyingPortal::StopLoopingSounds()
 
 void CFlyingPortal::Spawn( void )
 {
-	Precache();
-
 	pPhysEnvironment = physenv;
 
 	SetModel( "models/props_bts/rocket.mdl" );
-	SetSolid( SOLID_VPHYSICS );
-	SetSolidFlags( FSOLID_NOT_SOLID | FSOLID_TRIGGER );
-	SetMoveType( MOVETYPE_VPHYSICS );
-	SetCollisionBounds( FLYING_PORTAL_MINS, FLYING_PORTAL_MAXS );
-	CollisionProp()->UseTriggerBounds( true, 4 );
+	SetCollisionBoundsFromModel();
+	//CollisionProp()->UseTriggerBounds( true );
 
 	pPhysObject = VPhysicsInitNormal( SOLID_VPHYSICS, 0, false );
 	pPhysObject->EnableGravity( false );
@@ -104,8 +98,6 @@ void CFlyingPortal::Spawn( void )
 	pPhysObject->SetInertia( inertia );
 	pPhysObject->RecheckCollisionFilter();
 
-
-	SetUse( &CFlyingPortal::Use );
 
 	BaseClass::Spawn();
 }
@@ -150,7 +142,7 @@ void CFlyingPortal::FlyThink( void )
 		VectorAngles( -vVelocity, pPortal->m_qDelayedAngles );
 		pPortal->m_vDelayedPosition = GetAbsOrigin();
 
-		pPortal->PlacePortal( pPortal->m_vDelayedPosition, pPortal->m_qDelayedAngles, PORTAL_ANALOG_SUCCESS_INVALID_SURFACE );
+		pPortal->PlacePortal( pPortal->m_vDelayedPosition, pPortal->m_qDelayedAngles, PORTAL_ANALOG_SUCCESS_INVALID_SURFACE, true );
 
 		pPortal->m_vDelayedPosition = GetAbsOrigin();
 		pPortal->m_hPlacedBy = this;
@@ -168,16 +160,6 @@ void CFlyingPortal::KillThink( void )
 		pSimulator->ReleaseOwnershipOfEntity( this );
 	SetContextThink( NULL, TICK_NEVER_THINK, "FlyThinkContext" );
 	UTIL_Remove( this );
-}
-
-void CFlyingPortal::Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value )
-{
-	Msg( "Used\n" );
-	CBasePlayer *pPlayer = ToBasePlayer( pActivator );
-	if ( pPlayer )
-	{
-		pPlayer->PickupObject( this, false );
-	}
 }
 
 void CFlyingPortal::StartTouch( CBaseEntity *pOther )
@@ -203,7 +185,6 @@ void CFlyingPortal::StartTouch( CBaseEntity *pOther )
 static CBaseEntity *s_pPreviousHitEntity = NULL;
 void CFlyingPortal::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent )
 {
-
 	if ( bHitObject )
 		return;
 

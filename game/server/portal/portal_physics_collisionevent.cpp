@@ -51,6 +51,9 @@ int CPortal_CollisionEvent::ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject
 		if( ( pEntities[0] && pEntities[0]->bIsRelativeEntity ) || ( pEntities[1] && pEntities[1]->bIsRelativeEntity ) )
 			return 0;
 
+		if ( CPSCollisionEntity::IsPortalSimulatorCollisionEntity( pEntities[ 0 ] ) || CPSCollisionEntity::IsPortalSimulatorCollisionEntity( pEntities[ 1 ] ) )
+			return 0; //don't want shadow clones interacting w/ collision entity
+
 	}
 
 
@@ -143,6 +146,11 @@ int CPortal_CollisionEvent::ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject
 				CPSCollisionEntity::IsPortalSimulatorCollisionEntity( pEntities[ 0 ] ) || 
 				CPSCollisionEntity::IsPortalSimulatorCollisionEntity( pEntities[ 1 ] ) )
 			{
+				//don't allow the portal simulators to collide themselves
+				if ( CPSCollisionEntity::IsPortalSimulatorCollisionEntity( pEntities[ 0 ] ) &&
+					 CPSCollisionEntity::IsPortalSimulatorCollisionEntity( pEntities[ 1 ] ) )
+					return 0;
+
 				for( int i = 0; i != 2; ++i )
 				{
 					if( bStatic[i] )
@@ -157,7 +165,10 @@ int CPortal_CollisionEvent::ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject
 							//HACK: if we have a relative entity, only don't collide w/ world if not in portal hole
 							// this allows a box/phys obj to fall off a block with a portal on it and collide with the world while still in the portal environment
 							// may have to find a better fix for this if something comes up in playtesting
-							if ( !pSimulators[ j ]->m_DataAccess.Parent || pSimulators[ j ]->EntityIsInPortalHole( pEntities[ j ] ) ) 
+							// we also have to add a carveout for the collision entity itself
+							if ( !pSimulators[ j ]->m_DataAccess.Parent || 
+								  pSimulators[ j ]->EntityIsInPortalHole( pEntities[ j ] ) ||
+								  CPSCollisionEntity::IsPortalSimulatorCollisionEntity( pEntities[ j ] ) ) 
 							if ( pSimulator_Entity /*&& !PortalStuck*/ )
 							{
 								return 0;

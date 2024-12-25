@@ -1242,6 +1242,7 @@ void CBaseEntity::PhysicsPushEntity( const Vector& push, trace_t *pTrace )
 
 	if ( pTrace->fraction )
 	{
+		Msg( "Pushing %s by %.2fx %.2fy %.2fz\n", GetClassname(), push.x, push.y, push.z );
 		SetAbsOrigin( pTrace->endpos );
 
 		// FIXME(ywb):  Should we try to enable this here

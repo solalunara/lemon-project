@@ -24,7 +24,6 @@ public:
 	virtual void			Activate( void );
 	virtual void			OnRestore( void );
 
-	void					Use( CBaseEntity *pActivator, CBaseEntity *pCaller, USE_TYPE useType, float value );
 	virtual void			StartTouch( CBaseEntity *pOther );
 	virtual void			VPhysicsCollision( int index, gamevcollisionevent_t *pEvent );
 

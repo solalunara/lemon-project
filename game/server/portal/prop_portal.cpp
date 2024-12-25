@@ -42,7 +42,7 @@
 #define MAXIMUM_PORTAL_EXIT_VELOCITY 1000.0f
 #define NEW_PORTAL_LIMIT 10
 #define UPDATE_PORTAL_THINK_TIME gpGlobals->frametime
-#define PORTAL_TELEPORT_TIME 1 
+#define PORTAL_TELEPORT_TIME 10 
 #define PORTAL_HACK_SHOVE_AMOUNT 0
 
 CCallQueue *GetPortalCallQueue();
@@ -92,7 +92,6 @@ BEGIN_DATADESC( CProp_Portal )
 	DEFINE_THINKFUNC( FindRelativeEntityThink ),
 	DEFINE_THINKFUNC( UpdatePortalThink ),
 	DEFINE_THINKFUNC( FizzleThink ),
-	DEFINE_THINKFUNC( RelativeEntityCollisionReenable ),
 
 	DEFINE_INPUTFUNC( FIELD_BOOLEAN, "SetActivatedState", InputSetActivatedState ),
 	DEFINE_INPUTFUNC( FIELD_VOID, "Fizzle", InputFizzle ),
@@ -123,7 +122,6 @@ CProp_Portal::CProp_Portal( void )
 	m_bPortalStuck = false;
 	m_bPortalVeryStuck = false;
 	m_vPrevForward = Vector( 0.0f, 0.0f, 0.0f );
-	m_iLinkedRelativeEntityCollisionGroupSave = 0;
 	m_PortalSimulator.SetPortalSimulatorCallbacks( this );
 
 	// Init to something safe
@@ -383,24 +381,11 @@ void CProp_Portal::findParent( void )
 	//if it found an entity and that entity is on a list of acceptable entities, set that as a parent
 	if ( tr.m_pEnt )
 	{
-		//tr.m_pEnt->bIsRelativeEntity = true;
-
 		SetParent( tr.m_pEnt );
 		tr.m_pEnt->bIsRelativeEntity = true;
-		//if ( FClassnameIs( tr.m_pEnt, "func_physbox" ) )
-		//	tr.m_pEnt->SetCollisionGroup( COLLISION_GROUP_DEBRIS );
 		m_hRelativeEntity.Set( tr.m_pEnt );
 
 		m_PortalSimulator.SetParent( tr.m_pEnt );
-	}
-}
-
-void CProp_Portal::RelativeEntityCollisionReenable( void )
-{
-	Assert( m_pLinkedRelativeEntitySave );
-	if ( m_pLinkedRelativeEntitySave.Get() ) //still same status
-	{
-		m_pLinkedRelativeEntitySave->SetCollisionGroup( m_iLinkedRelativeEntityCollisionGroupSave );
 	}
 }
 
@@ -1350,15 +1335,6 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 			pOtherAsPlayer->Teleport( &ptNewOrigin, &qNewAngles, &vNewVelocity );
 
 
-			if ( RemotePortalDataAccess.Parent )
-			{
-				m_iLinkedRelativeEntityCollisionGroupSave = RemotePortalDataAccess.Parent->GetCollisionGroup();
-				m_pLinkedRelativeEntitySave = RemotePortalDataAccess.Parent;
-				RemotePortalDataAccess.Parent->SetCollisionGroup( COLLISION_GROUP_PASSABLE_DOOR );
-				SetContextThink( &CProp_Portal::RelativeEntityCollisionReenable, gpGlobals->curtime + 10 * gpGlobals->frametime, s_pRelativeEntityCollisionReenable );
-			}
-		
-
 			//modify the velocity, with base as base and non-base as local
 			//pOtherAsPlayer->SetLocalVelocity( vNewVelocity );
 			//pOtherAsPlayer->SetBaseVelocity( vAbsVelocity );
@@ -1373,7 +1349,6 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 			{
 				//doing velocity in two stages as a bug workaround, setting the velocity to anything other than 0 will screw up how objects rest on this entity in the future
 				pOther->Teleport( &ptNewOrigin, &qNewAngles, &vec3_origin );
-				//pOther->SetBaseVelocity( vNewVelocityBase );
 				pOther->ApplyAbsVelocityImpulse( vNewVelocity );
 			}
 		}
