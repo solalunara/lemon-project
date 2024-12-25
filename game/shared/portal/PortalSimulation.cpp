@@ -1048,7 +1048,8 @@ void CPortalSimulator::ReleaseAllEntityOwnership( void )
 	{
 		CPortalSimulator *s = GetSimulatorThatOwnsEntity( m_InternalData.Simulation.pCollisionEntity );
 		CPortalSimulator *t = this;
-		Msg( "simulator not owned by this" );
+		if ( s != t )
+			Msg( "simulator not owned by this" );
 	}
 }
 
@@ -1393,7 +1394,7 @@ void CPortalSimulator::CreateLocalPhysics( bool update )
 					m_InternalData.Simulation.Static.Wall.Local.Brushes.pPhysicsObject = m_InternalData.Simulation.pPhysicsEnvironment->CreatePolyObject( m_InternalData.Simulation.Static.Wall.Local.Brushes.pCollideable, m_InternalData.Simulation.Static.SurfaceProperties.surface.surfaceProps, vec3_origin, vec3_angle, &params );
 					m_InternalData.Simulation.Static.Wall.Local.Brushes.pPhysicsObject->SetShadow( 1e4, 1e4, false, false );
 					m_InternalData.Simulation.Static.Wall.Local.Brushes.pPhysicsObject->UpdateShadow( vParentOrigin, angParentAngles, true, 0 );
-					IPhysicsShadowController *c = m_InternalData.Simulation.Static.Wall.Local.Brushes.pPhysicsObject->GetShadowController();
+					//IPhysicsShadowController *c = m_InternalData.Simulation.Static.Wall.Local.Brushes.pPhysicsObject->GetShadowController();
 					//c->SetPhysicallyControlled( true );
 					m_InternalData.Simulation.Static.Wall.Local.Brushes.pPhysicsObject->SetPosition( vParentOrigin, angParentAngles, false );
 				}
@@ -1428,7 +1429,7 @@ void CPortalSimulator::CreateLocalPhysics( bool update )
 					m_InternalData.Simulation.Static.Wall.Local.Tube.pPhysicsObject->SetPosition( vParentOrigin, angParentAngles, false );
 					m_InternalData.Simulation.Static.Wall.Local.Tube.pPhysicsObject->SetShadow( 1e4, 1e4, false, false );
 					m_InternalData.Simulation.Static.Wall.Local.Tube.pPhysicsObject->UpdateShadow( vParentOrigin, angParentAngles, true, 0 );
-					IPhysicsShadowController *c = m_InternalData.Simulation.Static.Wall.Local.Tube.pPhysicsObject->GetShadowController();
+					//IPhysicsShadowController *c = m_InternalData.Simulation.Static.Wall.Local.Tube.pPhysicsObject->GetShadowController();
 					//c->SetPhysicallyControlled( true );
 				}
 
@@ -2065,10 +2066,6 @@ void CPortalSimulator::CreatePolyhedrons( bool update )
 											-fWorldClipPlane_Forward[2],
 											-fWorldClipPlane_Forward[3] };
 
-	float fWallClipPlane_Forward[4] = {		m_InternalData.Placement.PortalPlane.m_Normal.x,
-											m_InternalData.Placement.PortalPlane.m_Normal.y,
-											m_InternalData.Placement.PortalPlane.m_Normal.z,
-											m_InternalData.Placement.PortalPlane.m_Dist }; // - PORTAL_WORLD_WALL_HALF_SEPARATION_AMOUNT
 
 	//float fWallClipPlane_Reverse[4] = {		-fWallClipPlane_Forward[0],
 	//										-fWallClipPlane_Forward[1],

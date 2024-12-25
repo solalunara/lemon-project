@@ -42,7 +42,7 @@
 #define MAXIMUM_PORTAL_EXIT_VELOCITY 1000.0f
 #define NEW_PORTAL_LIMIT 10
 #define UPDATE_PORTAL_THINK_TIME gpGlobals->frametime
-#define PORTAL_TELEPORT_TIME 10 
+#define PORTAL_TELEPORT_TIME 0.2f
 #define PORTAL_HACK_SHOVE_AMOUNT 0
 
 CCallQueue *GetPortalCallQueue();
@@ -965,7 +965,7 @@ bool CProp_Portal::ShouldTeleportTouchingEntity( CBaseEntity *pOther )
 {
 
 	//time hacks to prevent recursive teleportation
-	if ( m_fLastTeleportTime + PORTAL_TELEPORT_TIME > gpGlobals->framecount )
+	if ( m_fLastTeleportTime + PORTAL_TELEPORT_TIME > gpGlobals->curtime )
 		return false;
 
 	
@@ -1052,7 +1052,7 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 		return;
 	}
 
-	m_fLastTeleportTime = gpGlobals->framecount;
+	m_fLastTeleportTime = gpGlobals->curtime;
 
 	Assert( m_hLinkedPortal.Get() != NULL );
 
@@ -1265,7 +1265,7 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 	{
 		Vector vRelativeVelocity = vNewVelocity - m_hLinkedPortal->getPortalVelocity();
 		//minimum floor exit velocity if both portals are on the floor or the player is coming out of the floor
-		int iVelSign = Sign( RemotePortalDataAccess.Placement.vForward.z );
+		//int iVelSign = Sign( RemotePortalDataAccess.Placement.vForward.z );
 		if( RemotePortalDataAccess.Placement.vForward.z > 0.7071f )
 		{
 			if ( bPlayer )

@@ -1,19 +1,19 @@
-﻿Build started 7/24/2021 7:06:57 PM.
-     1>Project "C:\Users\FredrichVonPreussen\Downloads\lemon-project-main\lemon-project-main\src\game\server\server_portal.vcxproj" on node 2 (Build target(s)).
+﻿Build started 25/12/2024 19:54:31.
+     1>Project "C:\Users\luna\Documents\prog\lemon-project\game\server\server_portal.vcxproj" on node 2 (Build target(s)).
      1>PreBuildEvent:
          if EXIST ..\..\..\game\portal\bin\.\server.dll for /f "delims=" %%A in ('attrib "..\..\..\game\portal\bin\.\server.dll"') do set valveTmpIsReadOnly="%%A"
          set valveTmpIsReadOnlyLetter=%valveTmpIsReadOnly:~6,1%
-         if "%valveTmpIsReadOnlyLetter%"=="R" del /q "C:\Users\FredrichVonPreussen\Downloads\lemon-project-main\lemon-project-main\src\game\server\Release_portal\"server.dll
+         if "%valveTmpIsReadOnlyLetter%"=="R" del /q "C:\Users\luna\Documents\prog\lemon-project\game\server\Release_portal\"server.dll
          if exist "..\..\devtools\bin\vpc.exe" "..\..\devtools\bin\vpc.exe" -crc2 "server_portal.vcxproj"
          if ERRORLEVEL 1 exit /b 1
          
          :VCEnd
        ClCompile:
-         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /I..\..\common /I..\..\public /I..\..\public\tier0 /I..\..\public\tier1 /I..\..\game\server\generated_proto_portal /I"..\..\thirdparty\protobuf-2.3.0\src" /I.\ /I..\..\game\shared /I..\..\utils\common /I..\..\game\shared\econ /I..\..\game\server\NextBot /I..\..\game\shared\portal /I.\hl2 /I.\episodic /I..\..\game\shared\Multiplayer /I..\..\game\shared\hl2 /I..\..\game\shared\portal /I.\portal /Zi /nologo /W4 /WX /MP /O2 /Ob2 /Oi /Ot /Oy- /D VPC /D RAD_TELEMETRY_DISABLED /D WIN32 /D _WIN32 /D NDEBUG /D _WINDOWS /D _USRDLL /D _CRT_SECURE_NO_DEPRECATE /D _CRT_NONSTDC_NO_DEPRECATE /D _ALLOW_RUNTIME_LIBRARY_MISMATCH /D _ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH /D _ALLOW_MSC_VER_MISMATCH /D _USING_V110_SDK71_ /D _WINDLL /D _MBCS /D COMPILER_MSVC32 /D COMPILER_MSVC32 /D COMPILER_MSVC /D _DLL_EXT=.dll /D DLLNAME=server /D BINK_VIDEO /D AVI_VIDEO /D WMV_VIDEO /D DEV_BUILD /D FRAME_POINTER_OMISSION_DISABLED /D GAME_DLL /D VECTOR /D VERSION_SAFE_STEAM_API_INTERFACES /D PROTECTED_THINGS_ENABLE /D sprintf=use_Q_snprintf_instead_of_sprintf /D strncpy=use_Q_strncpy_instead /D _snprintf=use_Q_snprintf_instead /D fopen=dont_use_fopen /D PORTAL /D HL2_DLL /D HL2_EPISODIC /D USES_SAVERESTORE /D _EXTERNAL_DLL_EXT=.dll /D VPCGAMECAPS=PORTAL /D "PROJECTDIR=C:\Users\FredrichVonPreussen\Downloads\lemon-project-main\lemon-project-main\src\game\server" /D _DLL_EXT=.dll /D SOURCE1=1 /D VPCGAME=portal /GF /Gm- /MT /GS /Gy /arch:SSE /fp:fast /Zc:wchar_t /Zc:forScope /GR /Yu"cbase.h" /Fp".\Release_portal\server.pch" /Fo".\Release_portal\/" /Fd".\Release_portal\/vc120.pdb" /Gd /TP /wd4316 /analyze- /FC /errorReport:prompt /Zm200 /d2Zi+ /Gw portal\func_portal_detector.cpp portal\prop_portal.cpp
-         func_portal_detector.cpp
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /I..\..\common /I..\..\public /I..\..\public\tier0 /I..\..\public\tier1 /I..\..\game\server\generated_proto_portal /I"..\..\thirdparty\protobuf-2.3.0\src" /I.\ /I..\..\game\shared /I..\..\utils\common /I..\..\game\shared\econ /I..\..\game\server\NextBot /I..\..\game\shared\portal /I.\hl2 /I.\episodic /I..\..\game\shared\Multiplayer /I..\..\game\shared\hl2 /I..\..\game\shared\portal /I.\portal /Zi /nologo /W4 /WX /MP /O2 /Ob2 /Oi /Ot /Oy- /D VPC /D RAD_TELEMETRY_DISABLED /D WIN32 /D _WIN32 /D NDEBUG /D _WINDOWS /D _USRDLL /D _CRT_SECURE_NO_DEPRECATE /D _CRT_NONSTDC_NO_DEPRECATE /D _ALLOW_RUNTIME_LIBRARY_MISMATCH /D _ALLOW_ITERATOR_DEBUG_LEVEL_MISMATCH /D _ALLOW_MSC_VER_MISMATCH /D _USING_V110_SDK71_ /D _WINDLL /D _MBCS /D COMPILER_MSVC32 /D COMPILER_MSVC32 /D COMPILER_MSVC /D _DLL_EXT=.dll /D DLLNAME=server /D BINK_VIDEO /D AVI_VIDEO /D WMV_VIDEO /D DEV_BUILD /D FRAME_POINTER_OMISSION_DISABLED /D GAME_DLL /D VECTOR /D VERSION_SAFE_STEAM_API_INTERFACES /D PROTECTED_THINGS_ENABLE /D sprintf=use_Q_snprintf_instead_of_sprintf /D strncpy=use_Q_strncpy_instead /D _snprintf=use_Q_snprintf_instead /D fopen=dont_use_fopen /D PORTAL /D HL2_DLL /D HL2_EPISODIC /D USES_SAVERESTORE /D _EXTERNAL_DLL_EXT=.dll /D VPCGAMECAPS=PORTAL /D "PROJECTDIR=C:\Users\luna\Documents\prog\lemon-project\game\server" /D _DLL_EXT=.dll /D SOURCE1=1 /D VPCGAME=portal /GF /Gm- /MT /GS /Gy /arch:SSE /fp:fast /Zc:wchar_t /Zc:forScope /GR /Yu"cbase.h" /Fp".\Release_portal\server.pch" /Fo".\Release_portal\/" /Fd".\Release_portal\/vc120.pdb" /Gd /TP /wd4316 /analyze- /FC /errorReport:prompt /Zm200 /d2Zi+ /Gw portal\prop_portal.cpp
          prop_portal.cpp
        Link:
          C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:".\Release_portal\\server.dll" /INCREMENTAL:NO /NOLOGO /LIBPATH:..\..\lib\common\. /LIBPATH:..\..\lib\public\. shell32.lib user32.lib advapi32.lib gdi32.lib comdlg32.lib ole32.lib winmm.lib /NODEFAULTLIB:libc /NODEFAULTLIB:libcd /NODEFAULTLIB:libcmtd /MANIFEST:NO /DEBUG /PDB:".\Release_portal\/server.pdb" /SUBSYSTEM:WINDOWS,"5.01" /OPT:REF /OPT:NOICF /TLBID:1 /DYNAMICBASE:NO /NXCOMPAT /IMPLIB:".\Release_portal\server.lib" /MACHINE:X86 /SAFESEH:NO  /ignore:4221 /DLL .\Release_portal\\pointeroverride.obj
+         .\Release_portal\/FlyingPortal.obj
          .\Release_portal\/gamedll_replay.obj
          .\Release_portal\/achievement_saverestore.obj
          .\Release_portal\/achievementmgr.obj
@@ -631,27 +631,28 @@
          ..\..\lib\public\tier2.lib
          ..\..\lib\public\tier3.lib
          ..\..\lib\public\vstdlib.lib
+     1>mathlib.lib(mathlib_base.obj) : warning LNK4075: ignoring '/EDITANDCONTINUE' due to '/OPT:LBR' specification
             Creating library .\Release_portal\server.lib and object .\Release_portal\server.exp
-         server_portal.vcxproj -> C:\Users\FredrichVonPreussen\Downloads\lemon-project-main\lemon-project-main\src\game\server\.\Release_portal\server.dll
+         server_portal.vcxproj -> C:\Users\luna\Documents\prog\lemon-project\game\server\.\Release_portal\server.dll
        PostBuildEvent:
          if not exist "..\..\..\game\portal\bin\." mkdir "..\..\..\game\portal\bin\."
-         copy "C:\Users\FredrichVonPreussen\Downloads\lemon-project-main\lemon-project-main\src\game\server\Release_portal\server.dll" "..\..\..\game\portal\bin\.\server.dll"
+         copy "C:\Users\luna\Documents\prog\lemon-project\game\server\Release_portal\server.dll" "..\..\..\game\portal\bin\.\server.dll"
          if ERRORLEVEL 1 goto BuildEventFailed
-         if exist "C:\Users\FredrichVonPreussen\Downloads\lemon-project-main\lemon-project-main\src\game\server\Release_portal\server.map" copy "C:\Users\FredrichVonPreussen\Downloads\lemon-project-main\lemon-project-main\src\game\server\Release_portal\server.map" ..\..\..\game\portal\bin\.\server.map
-         copy "C:\Users\FredrichVonPreussen\Downloads\lemon-project-main\lemon-project-main\src\game\server\Release_portal\server.pdb" ..\..\..\game\portal\bin\.\server.pdb
+         if exist "C:\Users\luna\Documents\prog\lemon-project\game\server\Release_portal\server.map" copy "C:\Users\luna\Documents\prog\lemon-project\game\server\Release_portal\server.map" ..\..\..\game\portal\bin\.\server.map
+         copy "C:\Users\luna\Documents\prog\lemon-project\game\server\Release_portal\server.pdb" ..\..\..\game\portal\bin\.\server.pdb
          if ERRORLEVEL 1 goto BuildEventFailed
          goto BuildEventOK
          :BuildEventFailed
          echo *** ERROR! PostBuildStep FAILED for Server (Portal)! EXE or DLL is probably running. ***
-         del /q "C:\Users\FredrichVonPreussen\Downloads\lemon-project-main\lemon-project-main\src\game\server\Release_portal\server.dll"
+         del /q "C:\Users\luna\Documents\prog\lemon-project\game\server\Release_portal\server.dll"
          exit 1
          :BuildEventOK
          
          :VCEnd
                  1 file(s) copied.
                  1 file(s) copied.
-     1>Done Building Project "C:\Users\FredrichVonPreussen\Downloads\lemon-project-main\lemon-project-main\src\game\server\server_portal.vcxproj" (Build target(s)).
+     1>Done Building Project "C:\Users\luna\Documents\prog\lemon-project\game\server\server_portal.vcxproj" (Build target(s)).
 
 Build succeeded.
 
-Time Elapsed 00:00:04.31
+Time Elapsed 00:00:06.55

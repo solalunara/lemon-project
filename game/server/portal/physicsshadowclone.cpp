@@ -22,7 +22,7 @@ static int g_iShadowCloneCount = 0;
 ConVar sv_debug_physicsshadowclones("sv_debug_physicsshadowclones", "0", FCVAR_REPLICATED );
 ConVar sv_use_shadow_clones( "sv_use_shadow_clones", "1", FCVAR_REPLICATED | FCVAR_CHEAT ); //should we create shadow clones?
 
-static void DrawDebugOverlayForShadowClone( CPhysicsShadowClone *pClone );
+void DrawDebugOverlayForShadowClone( CPhysicsShadowClone *pClone );
 
 LINK_ENTITY_TO_CLASS( physicsshadowclone, CPhysicsShadowClone );
 

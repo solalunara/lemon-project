@@ -244,8 +244,8 @@ bool CPhysicsPushedEntities::SpeculativelyCheckPush( PhysicsPushedInfo_t &info, 
 	// unlike most physics objects
 	if ( pBlocker->IsPlayer() )
 	{
-		CPortalSimulator *pSim = NULL;
-		if ( pSim = CPortalSimulator::GetSimulatorThatOwnsEntity( pBlocker ) )
+		CPortalSimulator *pSim = CPortalSimulator::GetSimulatorThatOwnsEntity( pBlocker );
+		if ( pSim )
 			if ( pSim->EntityIsInPortalHole( pBlocker ) )
 				return true;
 	}
