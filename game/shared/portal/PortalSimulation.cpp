@@ -314,6 +314,29 @@ void CPortalSimulator::MoveTo( const Vector &ptCenter, const QAngle &angles )
 		AngleVectors( angles, &m_InternalData.Placement.vForward, &m_InternalData.Placement.vRight, &m_InternalData.Placement.vUp );
 		
 		m_InternalData.Placement.PortalPlane.Init( m_InternalData.Placement.vForward, m_InternalData.Placement.vForward.Dot( m_InternalData.Placement.ptCenter ) );
+
+		if ( m_InternalData.Parent )
+		{
+			matrix3x4_t matAbsRot_3x4;
+			AngleMatrix( angles, matAbsRot_3x4 );
+			VMatrix matAbs( matAbsRot_3x4 );
+			matAbs.SetTranslation( ptCenter );
+			matrix3x4_t matAbs_3x4 = matAbs.As3x4();
+
+			matrix3x4_t matParent_3x4 = m_InternalData.Parent->EntityToWorldTransform();
+			VMatrix matParent( matParent_3x4 );
+			VMatrix matParent_Inv;
+			bool invertable = matParent.InverseGeneral( matParent_Inv );
+			Assert( invertable );
+			if ( invertable )
+			{
+				matrix3x4_t matParent_Inv_3x4 = matParent_Inv.As3x4();
+				matrix3x4_t matLocal_3x4;
+				MatrixMultiply( matParent_Inv_3x4, matAbs_3x4, matLocal_3x4 );
+				VMatrix matLocal( matLocal_3x4 );
+				m_InternalData.Placement.matParentToPortal = matLocal;
+			}
+		}
 	}
 
 	//Clear();
@@ -1495,7 +1518,10 @@ void CPortalSimulator::CreateLinkedPhysics( bool update )
 	//everything in our linked collision should be based on the linked portal's world collision
 	PS_SD_Static_World_t &RemoteSimulationStaticWorld = m_pLinkedPortal->m_InternalData.Simulation.Static.World;
 
-	Assert( m_InternalData.Simulation.Static.Wall.RemoteTransformedToLocal.Brushes.pPhysicsObject == NULL ); //Be sure to find graceful fixes for asserts, performance is a big concern with portal simulation
+	Assert( m_InternalData.Simulation.Static.Wall.RemoteTransformedToLocal.Brushes.pPhysicsObject == NULL || 
+			( m_InternalData.Parent == m_pLinkedPortal->m_InternalData.Parent && m_InternalData.Parent ) ); //Be sure to find graceful fixes for asserts, performance is a big concern with portal simulation
+	// only create remote wall physics if not already created by local
+	if ( m_InternalData.Parent != m_pLinkedPortal->m_InternalData.Parent || !m_InternalData.Parent || !m_pLinkedPortal->m_InternalData.Parent )
 	if( RemoteSimulationStaticWorld.Brushes.pCollideable != NULL )
 	{
 		m_InternalData.Simulation.Static.Wall.RemoteTransformedToLocal.Brushes.pPhysicsObject = m_InternalData.Simulation.pPhysicsEnvironment->CreatePolyObjectStatic( RemoteSimulationStaticWorld.Brushes.pCollideable, m_pLinkedPortal->m_InternalData.Simulation.Static.SurfaceProperties.surface.surfaceProps, m_InternalData.Placement.ptaap_LinkedToThis.ptOriginTransform, m_InternalData.Placement.ptaap_LinkedToThis.qAngleTransform, &params );
@@ -1545,6 +1571,8 @@ void CPortalSimulator::CreateLinkedPhysics( bool update )
 			{
 				MarkAsOwned( pClone );
 				m_InternalData.Simulation.Dynamic.EntFlags[pClone->entindex()] |= PSEF_OWNS_PHYSICS;
+				if ( m_pLinkedPortal->m_DataAccess.Simulation.Dynamic.EntFlags[hEnt->entindex()] )
+					m_InternalData.Simulation.Dynamic.EntFlags[pClone->entindex()] |= PSEF_IS_IN_PORTAL_HOLE;
 				m_InternalData.Simulation.Dynamic.ShadowClones.FromLinkedPortal.AddToTail( pClone );
 				pClone->CollisionRulesChanged(); //adding the clone to the portal simulator changes how it collides
 			}
@@ -2635,6 +2663,7 @@ void CPortalSimulator::SetVPhysicsSimulationEnabled( bool bEnabled )
 	DEBUGTIMERONLY( DevMsg( 2, "[PSDT:%d] %sCPortalSimulator::SetVPhysicsSimulationEnabled() FINISH: %fms\n", GetPortalSimulatorGUID(), TABSPACING, functionTimer.GetDuration().GetMillisecondsF() ); );
 }
 
+ConVar r_psDrawPortalInt ( "r_psDrawPortalInt", "0" );
 ConVar r_draw_tube ( "r_draw_tube", "0" );
 ConVar r_draw_wall ( "r_draw_wall", "0" );
 ConVar r_draw_world ( "r_draw_world", "0" );
@@ -2655,31 +2684,47 @@ void CPortalSimulator::PrePhysFrame( void )
 		for( int i = 0; i != iPortalSimulators; ++i )
 		{
 			CPortalSimulator *pSimulator = pAllSimulators[i];
-
-			Color c_tube( 255, 0, 0 );
-			Color c_wall( 0, 255, 0 );
-			Color c_world( 255, 255, 255 );
-			if ( r_draw_tube.GetBool() )
-				for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Static.Wall.Local.Tube.Polyhedrons.Count(); ++i )
-					DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.Wall.Local.Tube.Polyhedrons[ i ], c_tube, pSimulator->m_InternalData.Parent );
-			if ( r_draw_wall.GetBool() )
-				for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Static.Wall.Local.Brushes.Polyhedrons.Count(); ++i )
-					DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.Wall.Local.Brushes.Polyhedrons[ i ], c_wall, pSimulator->m_InternalData.Parent );
-			if ( r_draw_world.GetBool() )
-				for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Static.World.Brushes.Polyhedrons.Count(); ++i )
-					DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.World.Brushes.Polyhedrons[ i ], c_world, NULL );
-			if ( r_draw_staticprops.GetBool() )
-				for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Static.World.StaticProps.Polyhedrons.Count(); ++i )
-					DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.World.StaticProps.Polyhedrons[ i ], c_world, NULL );
+			if ( r_psDrawPortalInt.GetInt() == i )
+			{
+				Color c_tube( 255, 0, 0 );
+				Color c_wall( 0, 255, 0 );
+				Color c_world( 255, 255, 255 );
+				if ( r_draw_tube.GetBool() )
+					for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Static.Wall.Local.Tube.Polyhedrons.Count(); ++i )
+						DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.Wall.Local.Tube.Polyhedrons[ i ], c_tube, pSimulator->m_InternalData.Parent );
+				if ( r_draw_wall.GetBool() )
+					for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Static.Wall.Local.Brushes.Polyhedrons.Count(); ++i )
+						DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.Wall.Local.Brushes.Polyhedrons[ i ], c_wall, pSimulator->m_InternalData.Parent );
+				if ( r_draw_world.GetBool() )
+					for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Static.World.Brushes.Polyhedrons.Count(); ++i )
+						DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.World.Brushes.Polyhedrons[ i ], c_world, NULL );
+				if ( r_draw_staticprops.GetBool() )
+					for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Static.World.StaticProps.Polyhedrons.Count(); ++i )
+						DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.World.StaticProps.Polyhedrons[ i ], c_world, NULL );
 #ifndef CLIENT_DLL
-			if ( r_draw_shadowclones.GetBool() )
-				for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Dynamic.ShadowClones.FromLinkedPortal.Count(); ++i )
-					DrawDebugOverlayForShadowClone( pSimulator->m_InternalData.Simulation.Dynamic.ShadowClones.FromLinkedPortal[ i ] );
+				if ( r_draw_shadowclones.GetBool() )
+					for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Dynamic.ShadowClones.FromLinkedPortal.Count(); ++i )
+						DrawDebugOverlayForShadowClone( pSimulator->m_InternalData.Simulation.Dynamic.ShadowClones.FromLinkedPortal[ i ] );
 #endif
+			}
 					
 
 			if( !pSimulator->IsReadyToSimulate() )
 				continue;
+
+			if ( pSimulator->m_InternalData.Parent )
+			{
+				matrix3x4_t matLocal_3x4 = pSimulator->m_InternalData.Placement.matParentToPortal.As3x4();
+				matrix3x4_t matParent_3x4 = pSimulator->m_InternalData.Parent->EntityToWorldTransform();
+				Vector vPortalOrigin;
+				QAngle vPortalAngles;
+				matrix3x4_t matPortal_3x4;
+				MatrixMultiply( matParent_3x4, matLocal_3x4, matPortal_3x4 );
+				MatrixAngles( matPortal_3x4, vPortalAngles );
+				MatrixGetTranslation( matPortal_3x4, vPortalOrigin );
+				
+				pSimulator->UpdatePosition( vPortalOrigin, vPortalAngles );
+			}	
 
 			int iOwnedEntities = pSimulator->m_InternalData.Simulation.Dynamic.OwnedEntities.Count();
 			if( iOwnedEntities != 0 )

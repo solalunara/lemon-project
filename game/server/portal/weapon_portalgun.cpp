@@ -684,6 +684,8 @@ float CWeaponPortalgun::FirePortal( bool bPortal2, Vector *pVector /*= 0*/, bool
 		pPortal->m_hPlacedBy = this;
 		*/
 		CFlyingPortal::Create( vTracerOrigin, vDirection, ( ( bPlayer ) ? ( sv_portal_blast_speed.GetFloat() ) : ( BLAST_SPEED_NON_PLAYER ) ), m_iPortalLinkageGroupID, bPortal2 );
+		if ( bPlayer )
+			pOwner->CollisionRulesChanged();
 	}
 	
 

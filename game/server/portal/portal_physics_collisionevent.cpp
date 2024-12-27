@@ -84,8 +84,8 @@ int CPortal_CollisionEvent::ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject
 				unsigned int iSourcIndex = pSource->entindex();
 				unsigned int bCloneIn = pSimulators[i]->m_DataAccess.Simulation.Dynamic.EntFlags[iCloneIndex] & PSEF_IS_IN_PORTAL_HOLE;
 				unsigned int bSourcIn = pSourceSimulator->m_DataAccess.Simulation.Dynamic.EntFlags[iSourcIndex] & PSEF_IS_IN_PORTAL_HOLE;
-				//Assert( bCloneIn == bSourcIn );
-				if ( bCloneIn != bSourcIn && false )
+				Assert( bCloneIn == bSourcIn );
+				if ( bCloneIn != bSourcIn )
 				{
 					if ( bSourcIn )
 						Warning( "Shadow clone %i wasn't in portal hole while source %i was and were attempting to collide \n", iCloneIndex, iSourcIndex );
@@ -201,6 +201,18 @@ int CPortal_CollisionEvent::ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject
 				}
 			}
 
+		}
+		int iPreview = BaseClass::ShouldCollide( pObj0, pObj1, pGameData0, pGameData1 );
+		if ( iPreview )
+		{
+			for ( int i = 0; i < 2; ++i )
+			{
+				int j = 1-i;
+				if ( pEntities[ i ]->IsPlayer() )
+				{
+					DevMsg( "Collision\n" );
+				}
+			}
 		}
 	}
 

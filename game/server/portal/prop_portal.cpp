@@ -42,7 +42,7 @@
 #define MAXIMUM_PORTAL_EXIT_VELOCITY 1000.0f
 #define NEW_PORTAL_LIMIT 10
 #define UPDATE_PORTAL_THINK_TIME gpGlobals->frametime
-#define PORTAL_TELEPORT_TIME 0.2f
+#define PORTAL_TELEPORT_TIME 0.f
 #define PORTAL_HACK_SHOVE_AMOUNT 0
 
 CCallQueue *GetPortalCallQueue();
@@ -568,7 +568,6 @@ void CProp_Portal::UpdatePortalThink( void )
 	if ( m_vPortalVelocity.Get() != vec3_origin )
 	{
 		//UpdatePortalLinkage( false );
-		m_PortalSimulator.UpdatePosition( vOrigin, GetAbsAngles() );
 		UpdatePortalTeleportMatrix();
 		WakeNearbyEntities();
 		if ( m_hLinkedPortal )
@@ -579,7 +578,6 @@ void CProp_Portal::UpdatePortalThink( void )
 	else if ( m_bMovedLastThink )
 	{
 		//UpdatePortalLinkage( false );
-		m_PortalSimulator.UpdatePosition( vOrigin, GetAbsAngles() );
 		UpdatePortalTeleportMatrix();
 		WakeNearbyEntities();		
 		if ( m_hLinkedPortal )
@@ -968,6 +966,47 @@ bool CProp_Portal::ShouldTeleportTouchingEntity( CBaseEntity *pOther )
 	if ( m_fLastTeleportTime + PORTAL_TELEPORT_TIME > gpGlobals->curtime )
 		return false;
 
+	Vector vOtherVelocity;
+	{
+		IPhysicsObject *pOtherPhysObject = pOther->VPhysicsGetObject();
+		if ( pOtherPhysObject )
+			pOtherPhysObject->Wake();
+		if( pOther->GetMoveType() == MOVETYPE_VPHYSICS )
+		{
+			if( pOtherPhysObject && (pOtherPhysObject->GetShadowController() == NULL) )
+				pOtherPhysObject->GetVelocity( &vOtherVelocity, NULL );
+			else
+				pOther->GetVelocity( &vOtherVelocity );
+		}
+		else if ( pOther->IsPlayer() && pOther->VPhysicsGetObject() )
+		{
+			pOther->VPhysicsGetObject()->GetVelocity( &vOtherVelocity, NULL );
+
+			if ( vOtherVelocity == vec3_origin )
+			{
+				vOtherVelocity = pOther->GetAbsVelocity();
+			}
+		}
+		else
+		{
+			pOther->GetVelocity( &vOtherVelocity );
+		}
+
+		if( vOtherVelocity == vec3_origin )
+		{
+			// Recorded velocity is sometimes zero under pushed or teleported movement, or after position correction.
+			// In these circumstances, we want implicit velocity ((last pos - this pos) / timestep )
+			if ( pOtherPhysObject )
+			{
+				Vector vOtherImplicitVelocity;
+				pOtherPhysObject->GetImplicitVelocity( &vOtherImplicitVelocity, NULL );
+				vOtherVelocity += vOtherImplicitVelocity;
+			}
+		}
+	}
+	Vector vRelativeVelocity = vOtherVelocity - getPortalVelocity();
+	//if ( vRelativeVelocity.Dot( m_PortalSimulator.m_DataAccess.Placement.vForward ) > 0 )
+	//	return false; //don't teleport if moving away from portal
 	
 
 	if( !m_PortalSimulator.OwnsEntity( pOther ) ) //can't teleport an entity we don't own
@@ -1008,7 +1047,6 @@ bool CProp_Portal::ShouldTeleportTouchingEntity( CBaseEntity *pOther )
 	// Test for entity's center being past portal plane
 	if(m_PortalSimulator.m_DataAccess.Placement.PortalPlane.m_Normal.Dot( ptOtherCenter ) < m_PortalSimulator.m_DataAccess.Placement.PortalPlane.m_Dist)
 	{
-		Vector vRelativeVelocity = pOther->GetAbsVelocity() - getPortalVelocity();
 		//entity wants to go further into the plane
 		if( m_PortalSimulator.EntityIsInPortalHole( pOther ) )
 		{

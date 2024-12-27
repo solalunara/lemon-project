@@ -712,6 +712,18 @@ void CPhysicsPushedEntities::GenerateBlockingEntityList()
 		partition->EnumerateElementsInBox( PARTITION_ENGINE_NON_STATIC_EDICTS, vecAbsMins, vecAbsMaxs, false, &blockerEnum );
 
 		//Go back throught the generated list.
+		//HACK: because portals can be on push movers, the player can end up coming out of a portal and into the trace,
+		// but the expected behaviour would be that the portal prevents the player from being pushed by the pusher
+		// this is only relevant for the player because her world center is within the pusher after teleportation,
+		// unlike most physics objects
+		for ( int i = 0; i < m_rgMoved.Count(); ++i )
+		if ( m_rgMoved[ i ].m_pEntity->IsPlayer() )
+		{
+			CPortalSimulator *pSim = CPortalSimulator::GetSimulatorThatOwnsEntity( m_rgMoved[ i ].m_pEntity );
+			if ( pSim )
+				m_rgMoved.Remove( i-- );
+		}
+
 	}
 }
 
@@ -752,6 +764,18 @@ void CPhysicsPushedEntities::GenerateBlockingEntityListAddBox( const Vector &vec
 		partition->EnumerateElementsInBox( PARTITION_ENGINE_NON_STATIC_EDICTS, vecAbsMins, vecAbsMaxs, false, &blockerEnum );
 
 		//Go back throught the generated list.
+		//HACK: because portals can be on push movers, the player can end up coming out of a portal and into the trace,
+		// but the expected behaviour would be that the portal prevents the player from being pushed by the pusher
+		// this is only relevant for the player because her world center is within the pusher after teleportation,
+		// unlike most physics objects
+		for ( int i = 0; i < m_rgMoved.Count(); ++i )
+		if ( m_rgMoved[ i ].m_pEntity->IsPlayer() )
+		{
+			CPortalSimulator *pSim = CPortalSimulator::GetSimulatorThatOwnsEntity( m_rgMoved[ i ].m_pEntity );
+			if ( pSim )
+				m_rgMoved.Remove( i-- );
+		}
+
 	}
 }
 
