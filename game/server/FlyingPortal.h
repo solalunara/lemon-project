@@ -44,9 +44,6 @@ public:
 
 	bool			bHitObject;
 	int				iNumBounces;
-
-	IPhysicsObject	*pPhysObject;
-	IPhysicsEnvironment *pPhysEnvironment;
 };
 
 bool IsEntityPortalable( CBaseEntity *pEnt );

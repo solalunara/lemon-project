@@ -17,7 +17,6 @@
 
 BEGIN_DATADESC( CFlyingPortal )
 	DEFINE_FIELD( iLinkageGroup, FIELD_INTEGER ),
-	DEFINE_FIELD( pPhysObject, FIELD_CLASSPTR ),
 	DEFINE_THINKFUNC( FlyThink ),
 	DEFINE_THINKFUNC( KillThink )
 END_DATADESC()
@@ -33,6 +32,8 @@ LINK_ENTITY_TO_CLASS( flying_portal, CFlyingPortal );
 #define FLYING_PORTAL_MINS Vector( -.2, -.2, -.2 )
 #define FLYING_PORTAL_MAXS Vector( .2, .2, .2 )
 
+ConVar sv_portal_delay_shot_time( "sv_portal_delay_shot_time", "0", FCVAR_CHEAT );
+
 
 CFlyingPortal::CFlyingPortal() :
 	CBaseAnimating(), bHitObject( false ), iNumBounces( 0 )
@@ -47,12 +48,11 @@ CFlyingPortal *CFlyingPortal::Create( Vector vStartPos, Vector vDirection, float
 	CFlyingPortal *pPortal = static_cast<CFlyingPortal *>( BaseClass::Create( "flying_portal", vStartPos, Angles ) );
 	pPortal->qAngles = Angles;
 	pPortal->vVelocity = vDirection.Normalized() * fSpeed;
-	pPortal->ApplyAbsVelocityImpulse( pPortal->vVelocity );
 	pPortal->iLinkageGroup = iLinkageGroup;
 	pPortal->bPortal2 = bPortal2;
-	pPortal->SetContextThink( &CFlyingPortal::FlyThink, gpGlobals->curtime, "FlyThinkContext" );
+	pPortal->SetContextThink( &CFlyingPortal::FlyThink, gpGlobals->curtime + sv_portal_delay_shot_time.GetFloat(), "FlyThinkContext" );
 	pPortal->SetCollisionGroup( COLLISION_GROUP_PUSHAWAY );
-	pPortal->pPhysObject->RecheckCollisionFilter();
+	pPortal->CollisionRulesChanged();
 
 
 	byte r = bPortal2 ? 255 : 10;
@@ -83,21 +83,8 @@ void CFlyingPortal::StopLoopingSounds()
 
 void CFlyingPortal::Spawn( void )
 {
-	pPhysEnvironment = physenv;
-
 	SetModel( "models/props_bts/rocket.mdl" );
 	SetCollisionBoundsFromModel();
-	//CollisionProp()->UseTriggerBounds( true );
-
-	pPhysObject = VPhysicsInitNormal( SOLID_VPHYSICS, 0, false );
-	pPhysObject->EnableGravity( false );
-	pPhysObject->EnableCollisions( true );
-	pPhysObject->SetMass( 2 );
-	pPhysObject->EnableDrag( false );
-	Vector inertia = Vector( 1, 10, 10 );
-	pPhysObject->SetInertia( inertia );
-	pPhysObject->RecheckCollisionFilter();
-
 
 	BaseClass::Spawn();
 }
@@ -125,12 +112,22 @@ void CFlyingPortal::FlyThink( void )
 		SetContextThink( &CFlyingPortal::KillThink, gpGlobals->curtime + 2.0f, "FlyThinkContext" );
 		return;
 	}
+	if ( !VPhysicsGetObject() )
+	{
+		IPhysicsObject *pPhysObject = VPhysicsInitNormal( SOLID_VPHYSICS, 0, false );
+		pPhysObject->EnableGravity( false );
+		pPhysObject->EnableCollisions( true );
+		pPhysObject->SetMass( 2 );
+		pPhysObject->EnableDrag( false );
+		Vector inertia = Vector( 1, 10, 10 );
+		pPhysObject->SetInertia( inertia );
+		ApplyAbsVelocityImpulse( vVelocity );
+		pPhysObject->RecheckCollisionFilter();
+	}
 	
 	SetContextThink( &CFlyingPortal::FlyThink, gpGlobals->curtime + gpGlobals->frametime * FRAMES_PER_THINK, "FlyThinkContext" );
-	if ( !pPhysObject )
-		pPhysObject = VPhysicsGetObject();
 
-	pPhysObject->GetVelocity( &vVelocity, NULL );
+	VPhysicsGetObject()->GetVelocity( &vVelocity, NULL );
 	fMoveDist += ( vVelocity * gpGlobals->frametime * FRAMES_PER_THINK ).Length();
 
 	//if the portal has moved past the max distance, cancel it
@@ -189,7 +186,7 @@ void CFlyingPortal::VPhysicsCollision( int index, gamevcollisionevent_t *pEvent 
 		return;
 
 	Vector CurrentVelocity;
-	pPhysObject->GetVelocity( &CurrentVelocity, NULL );
+	VPhysicsGetObject()->GetVelocity( &CurrentVelocity, NULL );
 
 	CBaseEntity *pOther = pEvent->pEntities[!index];
 	if ( pOther != s_pPreviousHitEntity && pEvent->deltaCollisionTime > 0.05f )
