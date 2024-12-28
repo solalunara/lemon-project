@@ -101,27 +101,22 @@ int CPortal_CollisionEvent::ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject
 		{
 			if( pSimulators[0] != NULL ) //and not main world
 			{
-				if( bStatic[0] || bStatic[1] )
+				for( int i = 0; i != 2; ++i )
 				{
-					for( int i = 0; i != 2; ++i )
+					if( CPSCollisionEntity::IsPortalSimulatorCollisionEntity( pEntities[i] ) )
 					{
-						if( bStatic[i] )
+						PS_PhysicsObjectSourceType_t objectSource;
+						if(	pSimulators[i]->CreatedPhysicsObject( pPhysObjects[i], &objectSource ) && 
+							((objectSource == PSPOST_REMOTE_BRUSHES) || (objectSource == PSPOST_REMOTE_STATICPROPS)) )
 						{
-							if( CPSCollisionEntity::IsPortalSimulatorCollisionEntity( pEntities[i] ) )
-							{
-								PS_PhysicsObjectSourceType_t objectSource;
-								if(	pSimulators[i]->CreatedPhysicsObject( pPhysObjects[i], &objectSource ) && 
-									((objectSource == PSPOST_REMOTE_BRUSHES) || (objectSource == PSPOST_REMOTE_STATICPROPS)) )
-								{
-									if( (pSimulators[1-i]->m_DataAccess.Simulation.Dynamic.EntFlags[pEntities[1-i]->entindex()] & PSEF_IS_IN_PORTAL_HOLE) == 0 )
-										return 0; //require that the entity be in the portal hole before colliding with transformed geometry
-									//FIXME: The above requirement might fail horribly for transformed collision blocking the portal from the other side and fast moving objects
-								}	
-							}
-							break;
-						}
+							if( (pSimulators[1-i]->m_DataAccess.Simulation.Dynamic.EntFlags[pEntities[1-i]->entindex()] & PSEF_IS_IN_PORTAL_HOLE) == 0 )
+								return 0; //require that the entity be in the portal hole before colliding with transformed geometry
+							//FIXME: The above requirement might fail horribly for transformed collision blocking the portal from the other side and fast moving objects
+						}	
 					}
+					break;
 				}
+				if( bStatic[0] || bStatic[1] ) {}
 				else if( bShadowClonesInvolved )
 				{
 					if( ((pSimulators[0]->m_DataAccess.Simulation.Dynamic.EntFlags[pEntities[0]->entindex()] | 
@@ -138,9 +133,15 @@ int CPortal_CollisionEvent::ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject
 			if( bShadowClonesInvolved ) //entities can only collide with shadow clones "owned" by the same simulator.
 				return 0;
 
-			//code to allow entities touched by portal to not collide with relative entity
-			if ( ( pSimulators[0] && pEntities[1]->bIsRelativeEntity ) || ( pSimulators[1] && pEntities[0]->bIsRelativeEntity ) )
-				return 0;
+			for ( int i = 0; i != 2; ++i )
+			{
+				int j = 1-i;
+				if ( pSimulators[ i ] && pSimulators[ i ]->m_DataAccess.Parent.pEnt )
+				{
+					if ( pEntities[ j ] == pSimulators[ i ]->m_DataAccess.Parent.pEnt )
+						return 0;
+				}
+			}
 
 			if( bStatic[0] || bStatic[1] || 
 				CPSCollisionEntity::IsPortalSimulatorCollisionEntity( pEntities[ 0 ] ) || 
@@ -153,7 +154,7 @@ int CPortal_CollisionEvent::ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject
 
 				for( int i = 0; i != 2; ++i )
 				{
-					if( bStatic[i] )
+					if( bStatic[i] || CPSCollisionEntity::IsPortalSimulatorCollisionEntity( pEntities[ i ] ) )
 					{
 						int j = 1-i;
 						CPortalSimulator *pSimulator_Entity = pSimulators[j];
@@ -166,7 +167,7 @@ int CPortal_CollisionEvent::ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject
 							// this allows a box/phys obj to fall off a block with a portal on it and collide with the world while still in the portal environment
 							// may have to find a better fix for this if something comes up in playtesting
 							// we also have to add a carveout for the collision entity itself
-							if ( !pSimulators[ j ]->m_DataAccess.Parent || 
+							if ( !pSimulators[ j ]->m_DataAccess.Parent.pEnt || 
 								  pSimulators[ j ]->EntityIsInPortalHole( pEntities[ j ] ) ||
 								  CPSCollisionEntity::IsPortalSimulatorCollisionEntity( pEntities[ j ] ) ) 
 							if ( pSimulator_Entity /*&& !PortalStuck*/ )
@@ -208,7 +209,7 @@ int CPortal_CollisionEvent::ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject
 			for ( int i = 0; i < 2; ++i )
 			{
 				int j = 1-i;
-				if ( pEntities[ i ]->IsPlayer() )
+				if ( pEntities[ i ]->IsPlayer() && pEntities[ j ]->bIsRelativeEntity )
 				{
 					DevMsg( "Collision\n" );
 				}
