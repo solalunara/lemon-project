@@ -42,7 +42,6 @@
 #define MAXIMUM_PORTAL_EXIT_VELOCITY 1000.0f
 #define NEW_PORTAL_LIMIT 10
 #define UPDATE_PORTAL_THINK_TIME gpGlobals->frametime
-#define PORTAL_TELEPORT_TIME 0.f
 #define PORTAL_HACK_SHOVE_AMOUNT 0
 
 CCallQueue *GetPortalCallQueue();
@@ -117,7 +116,8 @@ LINK_ENTITY_TO_CLASS( prop_portal, CProp_Portal );
 
 
 
-CProp_Portal::CProp_Portal( void )
+CProp_Portal::CProp_Portal( void ) :
+	m_PortalSimulator( this )
 {
 	m_bPortalStuck = false;
 	m_bPortalVeryStuck = false;
@@ -341,12 +341,10 @@ void CProp_Portal::detectMove( void )
 		{
 			m_vPortalVelocity.Set( ( GetAbsOrigin() - prevRelOrig ) / UPDATE_PORTAL_THINK_TIME );
 			prevRelOrig = GetAbsOrigin();
-			SetBaseVelocity( m_vPortalVelocity );
 		}
 		else
 		{
 			m_vPortalVelocity.Set( vec3_origin );
-			SetBaseVelocity( vec3_origin );
 		}
 	}
 }
@@ -389,11 +387,8 @@ void CProp_Portal::findParent( void )
 	}
 }
 
-void CProp_Portal::RecursiveMoveForward( int iMaxTimes )
+void CProp_Portal::MoveForward()
 {
-	if ( iMaxTimes == 0 )
-		return;
-
 	// If inside an object, try to move normal relative to that object.
 	Vector vOrigin = GetAbsOrigin();
 	Vector vPortalForward;
@@ -404,14 +399,11 @@ void CProp_Portal::RecursiveMoveForward( int iMaxTimes )
 	baseFilter.AddClassnameToIgnore( "prop_portal" );
 	CTraceFilterTranslateClones traceFilterPortalShot( &baseFilter );
 	Ray_t ray;
-	ray.Init( vOrigin, vOrigin - ( vPortalForward * 2 ) );
+	ray.Init( vOrigin + ( vPortalForward * 10 ), vOrigin );
 	enginetrace->TraceRay( ray, MASK_ALL, &traceFilterPortalShot, &tr );
-	if ( tr.startsolid )
-	{
-		SetAbsOrigin( GetAbsOrigin() + ( vPortalForward ) );
-		ResetModel();
-		RecursiveMoveForward( iMaxTimes - 1 );
-	}
+	Assert( !tr.startsolid );
+	SetAbsOrigin( tr.endpos );
+	ResetModel();
 }
 
 //-----------------------------------------------------------------------------
@@ -490,7 +482,7 @@ void CProp_Portal::PlacementThink( void )
 
 	prevRelOrig = GetAbsOrigin();
 
-	RecursiveMoveForward( 20 );
+	MoveForward();
 }
 
 //-----------------------------------------------------------------------------
@@ -567,21 +559,11 @@ void CProp_Portal::UpdatePortalThink( void )
 
 	if ( m_vPortalVelocity.Get() != vec3_origin )
 	{
-		//UpdatePortalLinkage( false );
-		UpdatePortalTeleportMatrix();
-		WakeNearbyEntities();
-		if ( m_hLinkedPortal )
-			m_hLinkedPortal->WakeNearbyEntities();
 		if ( !m_bMovedLastThink )
 			m_bMovedLastThink = true;
 	}
 	else if ( m_bMovedLastThink )
 	{
-		//UpdatePortalLinkage( false );
-		UpdatePortalTeleportMatrix();
-		WakeNearbyEntities();		
-		if ( m_hLinkedPortal )
-			m_hLinkedPortal->WakeNearbyEntities();
 		m_bMovedLastThink = false;
 	}
 
@@ -957,15 +939,8 @@ Vector CProp_Portal::getPortalVelocity( void )
 	return m_vPortalVelocity.Get();
 }
 
-float CProp_Portal::m_fLastTeleportTime = 0;
-
 bool CProp_Portal::ShouldTeleportTouchingEntity( CBaseEntity *pOther )
 {
-
-	//time hacks to prevent recursive teleportation
-	if ( m_fLastTeleportTime + PORTAL_TELEPORT_TIME > gpGlobals->curtime )
-		return false;
-
 	Vector vOtherVelocity;
 	{
 		IPhysicsObject *pOtherPhysObject = pOther->VPhysicsGetObject();
@@ -1089,8 +1064,6 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 		GetPortalCallQueue()->QueueCall( this, &CProp_Portal::TeleportTouchingEntity, pOther );
 		return;
 	}
-
-	m_fLastTeleportTime = gpGlobals->curtime;
 
 	Assert( m_hLinkedPortal.Get() != NULL );
 
@@ -1604,11 +1577,6 @@ void CProp_Portal::StartTouch( CBaseEntity *pOther )
 	// Since prop_portal is a trigger it doesn't send back start touch, so I'm forcing it
 	pOther->StartTouch( this );
 
-	//as part of the time hacks, don't let entities touch portal if 
-	//if ( m_fLastTeleportTime + PORTAL_TELEPORT_TIME > gpGlobals->framecount )
-	//	return;
-
-
 	if( sv_portal_debug_touch.GetBool() )
 	{
 		DevMsg( "Portal %i StartTouch: %s : %f\n", ((m_bIsPortal2)?(2):(1)), pOther->GetClassname(), gpGlobals->curtime );
@@ -1856,10 +1824,10 @@ void CProp_Portal::ForceEntityToFitInPortalWall( CBaseEntity *pEntity )
 
 	Vector vCollideOrigin = vec3_origin;
 	QAngle qCollideAngle = vec3_angle;
-	if ( m_PortalSimulator.m_DataAccess.Parent )
+	if ( m_PortalSimulator.m_DataAccess.Parent.pEnt )
 	{
-		vCollideOrigin = m_PortalSimulator.m_DataAccess.Parent->GetAbsOrigin();
-		qCollideAngle = m_PortalSimulator.m_DataAccess.Parent->GetAbsAngles();
+		vCollideOrigin = m_PortalSimulator.m_DataAccess.Parent.pEnt->GetAbsOrigin();
+		qCollideAngle = m_PortalSimulator.m_DataAccess.Parent.pEnt->GetAbsAngles();
 	}
 
 	if ( m_PortalSimulator.IsReadyToSimulate() )

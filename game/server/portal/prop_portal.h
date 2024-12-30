@@ -47,8 +47,6 @@ public:
 	bool			m_bMovedLastThink;
 	bool			m_bSharedEnvironmentConfiguration; //this will be set by an instance of CPortal_Environment when two environments are in close proximity
 
-	static float	m_fLastTeleportTime; //HACK this prevents recursive teleportation by simply not allowing it
-
 	EHANDLE			m_hMicrophone; //the microphone for teleporting sound
 	EHANDLE			m_hSpeaker; //the speaker for teleported sound
 
@@ -96,7 +94,7 @@ public:
 	void					detectMove();
 	void					findParent();
 	bool					HasParent( void ) { return m_hRelativeEntity != NULL; }
-	void					RecursiveMoveForward( int iMaxTimes );
+	void					MoveForward();
 
 	void					PlacementThink( void );
 	void					FindRelativeEntityThink( void );
