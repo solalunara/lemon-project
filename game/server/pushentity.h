@@ -10,6 +10,9 @@
 #endif
 
 #include "movetype_push.h"
+#ifdef PORTAL
+#include "PortalSimulation.h"
+#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: Keeps track of original positions of any entities that are being possibly pushed
@@ -146,6 +149,15 @@ public:
 		if ( pTestEntity->GetMoveType() == MOVETYPE_VPHYSICS && 
 			pTestEntity->VPhysicsGetObject() && pTestEntity->VPhysicsGetObject()->IsMoveable() )
 			return false;
+
+#ifdef PORTAL
+		// this trace filter is used exclusively for attempting the push for MOVETYPE_PUSH objects
+		// if the object that's pushing is being emulated by the portal collision entity then ignore the entity
+		// but only the wall portion - we still want things to interact w/ the ground etc.
+		CPortalSimulator *pSim = CPortalSimulator::GetSimulatorThatOwnsEntity( pTestEntity );
+		if ( pSim && pSim->m_DataAccess.Parent.pEnt && pSim->m_DataAccess.Parent.pEnt == m_pRootParent && contentsMask & CONTENTS_PSCE_WALL )
+			return false; 
+#endif
 
 		return BaseClass::ShouldHitEntity( pHandleEntity, contentsMask );
 	}

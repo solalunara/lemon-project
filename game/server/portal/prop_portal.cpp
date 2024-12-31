@@ -387,25 +387,6 @@ void CProp_Portal::findParent( void )
 	}
 }
 
-void CProp_Portal::MoveForward()
-{
-	// If inside an object, try to move normal relative to that object.
-	Vector vOrigin = GetAbsOrigin();
-	Vector vPortalForward;
-	GetVectors( &vPortalForward, NULL, NULL );
-	trace_t tr;
-	CTraceFilterSimpleClassnameList baseFilter( NULL, COLLISION_GROUP_NONE );
-	UTIL_Portal_Trace_Filter( &baseFilter );
-	baseFilter.AddClassnameToIgnore( "prop_portal" );
-	CTraceFilterTranslateClones traceFilterPortalShot( &baseFilter );
-	Ray_t ray;
-	ray.Init( vOrigin + ( vPortalForward * 10 ), vOrigin );
-	enginetrace->TraceRay( ray, MASK_ALL, &traceFilterPortalShot, &tr );
-	Assert( !tr.startsolid );
-	SetAbsOrigin( tr.endpos );
-	ResetModel();
-}
-
 //-----------------------------------------------------------------------------
 // Purpose: Runs when a fired portal shot reaches it's destination wall. Detects current placement valididty state.
 //-----------------------------------------------------------------------------
@@ -474,15 +455,25 @@ void CProp_Portal::PlacementThink( void )
 		}
 	}
 
+	trace_t tr;
+	CTraceFilterSimpleClassnameList baseFilter( NULL, COLLISION_GROUP_NONE );
+	UTIL_Portal_Trace_Filter( &baseFilter );
+	baseFilter.AddClassnameToIgnore( "prop_portal" );
+	CTraceFilterTranslateClones traceFilterPortalShot( &baseFilter );
+	Ray_t ray;
+	ray.Init( m_vDelayedPosition + ( vForward * 20 ), m_vDelayedPosition );
+	enginetrace->TraceRay( ray, MASK_ALL, &traceFilterPortalShot, &tr );
+	Assert( !tr.startsolid );
+	m_vDelayedPosition = tr.endpos;
+
 	// Move to new location
 	NewLocation( m_vDelayedPosition, m_qDelayedAngles );
+	ResetModel();
 
 
 	SetContextThink( &CProp_Portal::FindRelativeEntityThink, gpGlobals->curtime, s_pFindRelativeEntityContext );
 
 	prevRelOrig = GetAbsOrigin();
-
-	MoveForward();
 }
 
 //-----------------------------------------------------------------------------
@@ -932,7 +923,7 @@ void CProp_Portal::Activate( void )
 	}
 }
 
-Vector CProp_Portal::getPortalVelocity( void )
+Vector CProp_Portal::GetPortalVelocity( void )
 {
 	if ( !m_hRelativeEntity.Get() )
 		return vec3_origin;
@@ -979,7 +970,7 @@ bool CProp_Portal::ShouldTeleportTouchingEntity( CBaseEntity *pOther )
 			}
 		}
 	}
-	Vector vRelativeVelocity = vOtherVelocity - getPortalVelocity();
+	Vector vRelativeVelocity = vOtherVelocity - GetPortalVelocity();
 	//if ( vRelativeVelocity.Dot( m_PortalSimulator.m_DataAccess.Placement.vForward ) > 0 )
 	//	return false; //don't teleport if moving away from portal
 	
@@ -1054,6 +1045,50 @@ bool CProp_Portal::ShouldTeleportTouchingEntity( CBaseEntity *pOther )
 	}
 
 	return false;
+}
+
+Vector CProp_Portal::GetRelativeVelocity( CBaseEntity *pOther )
+{
+	//grab current velocity
+	Vector vOtherVelocity;
+	{
+		IPhysicsObject *pOtherPhysObject = pOther->VPhysicsGetObject();
+		if ( pOtherPhysObject )
+			pOtherPhysObject->Wake();
+		if( pOther->GetMoveType() == MOVETYPE_VPHYSICS )
+		{
+			if( pOtherPhysObject && (pOtherPhysObject->GetShadowController() == NULL) )
+				pOtherPhysObject->GetVelocity( &vOtherVelocity, NULL );
+			else
+				pOther->GetVelocity( &vOtherVelocity );
+		}
+		else if ( pOther->IsPlayer() && pOther->VPhysicsGetObject() )
+		{
+			pOther->VPhysicsGetObject()->GetVelocity( &vOtherVelocity, NULL );
+
+			if ( vOtherVelocity == vec3_origin )
+			{
+				vOtherVelocity = pOther->GetAbsVelocity();
+			}
+		}
+		else
+		{
+			pOther->GetVelocity( &vOtherVelocity );
+		}
+
+		if( vOtherVelocity == vec3_origin )
+		{
+			// Recorded velocity is sometimes zero under pushed or teleported movement, or after position correction.
+			// In these circumstances, we want implicit velocity ((last pos - this pos) / timestep )
+			if ( pOtherPhysObject )
+			{
+				Vector vOtherImplicitVelocity;
+				pOtherPhysObject->GetImplicitVelocity( &vOtherImplicitVelocity, NULL );
+				vOtherVelocity += vOtherImplicitVelocity;
+			}
+		}
+	}
+	return vOtherVelocity - GetPortalVelocity();
 }
 
 void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
@@ -1186,7 +1221,7 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 		bNonPhysical = FClassnameIs( pOther, "prop_energy_ball" );
 	}
 
-    vOtherVelocity -= getPortalVelocity();
+    vOtherVelocity -= GetPortalVelocity();
 	Vector ptNewOrigin;
 	QAngle qNewAngles;
 	Vector vNewVelocity;
@@ -1213,7 +1248,7 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 		vNewVelocity = m_matrixThisToLinked.ApplyRotation( vOtherVelocity );
 
 		// Find the new base velocity
-		vNewVelocity += m_hLinkedPortal->getPortalVelocity();
+		vNewVelocity += m_hLinkedPortal->GetPortalVelocity();
 	}
 
 	//help camera reorientation for the player
@@ -1269,12 +1304,12 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 		}
 	}
 #if 0
-	Vector vDebug = m_hLinkedPortal->getPortalVelocity();
+	Vector vDebug = m_hLinkedPortal->GetPortalVelocity();
 	vNewVelocity += vDebug;
 #endif
 	//velocity hacks
 	{
-		Vector vRelativeVelocity = vNewVelocity - m_hLinkedPortal->getPortalVelocity();
+		Vector vRelativeVelocity = vNewVelocity - m_hLinkedPortal->GetPortalVelocity();
 		//minimum floor exit velocity if both portals are on the floor or the player is coming out of the floor
 		//int iVelSign = Sign( RemotePortalDataAccess.Placement.vForward.z );
 		if( RemotePortalDataAccess.Placement.vForward.z > 0.7071f )
@@ -1298,7 +1333,7 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 				}
 			}
 		}
-		vNewVelocity = vRelativeVelocity + m_hLinkedPortal->getPortalVelocity();
+		vNewVelocity = vRelativeVelocity + m_hLinkedPortal->GetPortalVelocity();
 	}
 
 	//untouch the portal(s), will force a touch on destination after the teleport
@@ -1325,7 +1360,7 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 #endif
 
 	//HACK: if one of the portals is moving shove the player out of it
-	//if ( bPlayer && m_hLinkedPortal->getPortalVelocity().Dot( RemotePortalDataAccess.Placement.vForward ) < -0.7071f )
+	//if ( bPlayer && m_hLinkedPortal->GetPortalVelocity().Dot( RemotePortalDataAccess.Placement.vForward ) < -0.7071f )
 	//	ptNewOrigin += RemotePortalDataAccess.Placement.PortalPlane.m_Normal * ( vNewVelocity.Length() * gpGlobals->frametime * PORTAL_HACK_SHOVE_AMOUNT );
 
 	//do the actual teleportation
@@ -1454,14 +1489,14 @@ void CProp_Portal::TeleportTouchingEntity( CBaseEntity *pOther )
 	//This forces the player down the normal of the remote portal (if the remote portal is facing down or up).
 	//Also since this causes a problem with infinite velocity since teleportation is based on the center, only do it if it's neccesary to have portals appear to function as normal
 	/*
-	if ( bPlayer && ( RemotePortalDataAccess.Placement.vForward.z < -.9f || RemotePortalDataAccess.Placement.vForward.z > .9f ) && ( !m_hLinkedPortal->getPortalVelocity().IsZero() || !getPortalVelocity().IsZero() ) )
+	if ( bPlayer && ( RemotePortalDataAccess.Placement.vForward.z < -.9f || RemotePortalDataAccess.Placement.vForward.z > .9f ) && ( !m_hLinkedPortal->GetPortalVelocity().IsZero() || !GetPortalVelocity().IsZero() ) )
 	{
 		Vector vDiff = pOther->WorldSpaceCenter() - pOther->GetAbsOrigin();
 		pOther->SetAbsOrigin( pOther->GetAbsOrigin() + ( RemotePortalDataAccess.Placement.vForward * vDiff.Length() ) );
 	}
 	*/
 #ifdef _DEBUG
-	Vector vLinkedVelocity = m_hLinkedPortal->getPortalVelocity();
+	Vector vLinkedVelocity = m_hLinkedPortal->GetPortalVelocity();
 	{
 		Vector ptTestCenter = pOther->WorldSpaceCenter();
 

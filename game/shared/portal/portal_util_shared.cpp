@@ -605,10 +605,10 @@ void UTIL_Portal_TraceRay( const CProp_Portal *pPortal, const Ray_t &ray, unsign
 
 	Vector vCollideOrigin = vec3_origin;
 	QAngle qCollideAngle = vec3_angle;
-	if ( portalSimulator.m_DataAccess.Parent )
+	if ( portalSimulator.m_DataAccess.Parent.pEnt )
 	{
-		vCollideOrigin = portalSimulator.m_DataAccess.Parent->GetAbsOrigin();
-		qCollideAngle = portalSimulator.m_DataAccess.Parent->GetAbsAngles();
+		vCollideOrigin = portalSimulator.m_DataAccess.Parent.pEnt->GetAbsOrigin();
+		qCollideAngle = portalSimulator.m_DataAccess.Parent.pEnt->GetAbsAngles();
 	}
 	
 
@@ -627,7 +627,8 @@ void UTIL_Portal_TraceRay( const CProp_Portal *pPortal, const Ray_t &ray, unsign
 		{
 			if( portalSimulator.m_DataAccess.Simulation.Static.Wall.Local.Tube.pCollideable )
 			{
-				physcollision->TraceBox( ray, portalSimulator.m_DataAccess.Simulation.Static.Wall.Local.Tube.pCollideable, vCollideOrigin, qCollideAngle, &TempTrace );
+				physcollision->TraceBox( ray, portalSimulator.m_DataAccess.Simulation.Static.Wall.Local.Tube.pCollideable, 
+					portalSimulator.m_DataAccess.Placement.ptCenter, portalSimulator.m_DataAccess.Placement.qAngles, &TempTrace );
 
 				if( (TempTrace.startsolid == false) && (TempTrace.fraction < pTrace->fraction) ) //never allow something to be stuck in the tube, it's more of a last-resort guide than a real collideable
 				{
@@ -924,7 +925,10 @@ void UTIL_Portal_TraceEntity( CBaseEntity *pEntity, const Vector &vecAbsStart, c
 		// Hit the world
 		if ( pFilter->GetTraceType() != TRACE_ENTITIES_ONLY )
 		{	
-			if( pPortalSimulator->m_DataAccess.Simulation.Static.World.Brushes.pCollideable && 
+			if( pPortalSimulator->m_DataAccess.Simulation.Static.World.Brushes.pCollideable &&
+#ifndef CLIENT_DLL
+			    pFilter->ShouldHitEntity( pEntity, pPortalSimulator->m_DataAccess.Simulation.Static.World.Brushes.pPhysicsObject->GetContents() ) && 
+#endif
 				sv_portal_trace_vs_world.GetBool() )
 			{
 				//physcollision->TraceCollide( vecAbsStart, vecAbsEnd, pCollision, qCollisionAngles, 
@@ -941,6 +945,9 @@ void UTIL_Portal_TraceEntity( CBaseEntity *pEntity, const Vector &vecAbsStart, c
 			//if( pPortalSimulator->m_DataAccess.Simulation.Static.Wall.RemoteTransformedToLocal.Brushes.pCollideable &&
 			if( pLinkedPortalSimulator &&
 				pLinkedPortalSimulator->m_DataAccess.Simulation.Static.World.Brushes.pCollideable &&
+#ifndef CLIENT_DLL
+			    pFilter->ShouldHitEntity( pEntity, pLinkedPortalSimulator->m_DataAccess.Simulation.Static.World.Brushes.pPhysicsObject->GetContents() ) && 
+#endif
 				sv_portal_trace_vs_world.GetBool() && 
 				sv_portal_trace_vs_holywall.GetBool() )
 			{
@@ -957,13 +964,16 @@ void UTIL_Portal_TraceEntity( CBaseEntity *pEntity, const Vector &vecAbsStart, c
 
 			Vector vCollideOrigin = vec3_origin;
 			QAngle qCollideAngle = vec3_angle;
-			if ( pPortalSimulator->m_DataAccess.Parent )
+			if ( pPortalSimulator->m_DataAccess.Parent.pEnt )
 			{
-				vCollideOrigin = pPortalSimulator->m_DataAccess.Parent->GetAbsOrigin();
-				qCollideAngle = pPortalSimulator->m_DataAccess.Parent->GetAbsAngles();
+				vCollideOrigin = pPortalSimulator->m_DataAccess.Parent.pEnt->GetAbsOrigin();
+				qCollideAngle = pPortalSimulator->m_DataAccess.Parent.pEnt->GetAbsAngles();
 			}
 
 			if ( pPortalSimulator->m_DataAccess.Simulation.Static.Wall.Local.Brushes.pCollideable && 
+#ifndef CLIENT_DLL
+			    pFilter->ShouldHitEntity( pEntity, pPortalSimulator->m_DataAccess.Simulation.Static.Wall.Local.Brushes.pPhysicsObject->GetContents() ) && 
+#endif
 				sv_portal_trace_vs_holywall.GetBool() )
 			{
 				//physcollision->TraceCollide( vecAbsStart, vecAbsEnd, pCollision, qCollisionAngles,
@@ -984,12 +994,16 @@ void UTIL_Portal_TraceEntity( CBaseEntity *pEntity, const Vector &vecAbsStart, c
 			}
 
 			if ( pPortalSimulator->m_DataAccess.Simulation.Static.Wall.Local.Tube.pCollideable && 
+#ifndef CLIENT_DLL
+			    pFilter->ShouldHitEntity( pEntity, pPortalSimulator->m_DataAccess.Simulation.Static.Wall.Local.Tube.pPhysicsObject->GetContents() ) && 
+#endif
 				sv_portal_trace_vs_holywall.GetBool() )
 			{
 				//physcollision->TraceCollide( vecAbsStart, vecAbsEnd, pCollision, qCollisionAngles,
 				//							pPortalSimulator->m_DataAccess.Simulation.Static.Wall.Local.Tube.pCollideable, vec3_origin, vec3_angle, &tempTrace );
 
-				physcollision->TraceBox( entRay, MASK_ALL, NULL, pPortalSimulator->m_DataAccess.Simulation.Static.Wall.Local.Tube.pCollideable, vCollideOrigin, qCollideAngle, &tempTrace );
+				physcollision->TraceBox( entRay, MASK_ALL, NULL, pPortalSimulator->m_DataAccess.Simulation.Static.Wall.Local.Tube.pCollideable, 
+					pPortalSimulator->m_DataAccess.Placement.ptCenter, pPortalSimulator->m_DataAccess.Placement.qAngles, &tempTrace );
 
 				if( (tempTrace.startsolid == false) && (tempTrace.fraction < pTrace->fraction) ) //never allow something to be stuck in the tube, it's more of a last-resort guide than a real collideable
 				{
@@ -1079,9 +1093,9 @@ void UTIL_Portal_TraceEntity( CBaseEntity *pEntity, const Vector &vecAbsStart, c
 							if( tempTrace.startsolid || (tempTrace.fraction < pTrace->fraction) )
 							{
 								*pTrace = tempTrace;
-							}
 						}
 					}
+				}
 #endif //#ifndef CLIENT_DLL
 				}
 			}

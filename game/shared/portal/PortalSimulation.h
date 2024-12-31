@@ -107,7 +107,6 @@ struct PS_PlacementData_t //stuff useful for geometric operations
 	PortalTransformAsAngledPosition_t ptaap_LinkedToThis;
 	CPhysCollide *pHoleShapeCollideable; //used to test if a collideable is in the hole, should NOT be collided against in general
 	CPolyhedron *pHolePolyhedron;
-	VMatrix matParentToPortal;
 	PS_PlacementData_t( void )
 	{
 		memset( this, 0, sizeof( PS_PlacementData_t ) );
@@ -270,22 +269,29 @@ struct PS_SimulationData_t //compartmentalized data for coherent management
 #endif
 };
 
+struct PS_ParentData_t
+{
+	CBaseEntity *pEnt;
+	VMatrix matParentToPortal;
+};
+
 struct PS_InternalData_t
 {
 	PS_PlacementData_t Placement;
 	PS_SimulationData_t Simulation;
-	CBaseEntity *Parent;
+	PS_ParentData_t Parent;
+	CBaseEntity *Portal;
 };
 
 
 class CPortalSimulator
 {
 public:
-	CPortalSimulator( void );
+	CPortalSimulator( CBaseEntity *pPortal );
 	~CPortalSimulator( void );
 	void				MoveTo( const Vector &ptCenter, const QAngle &angles );
 	void				UpdatePosition( const Vector &ptCenter, const QAngle &angles );
-	void				SetParent( CBaseEntity *Parent ) { m_InternalData.Parent = Parent; };
+	void				SetParent( CBaseEntity *Parent );
 	void				UpdatePortalHole( void ); //updates the hole in the wall to match the portal's position as given by internal data
 	void				ClearEverything( void );
 

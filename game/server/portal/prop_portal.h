@@ -90,11 +90,11 @@ public:
 	virtual void			Activate( void );
 	virtual void			OnRestore( void );
 
-	Vector					getPortalVelocity( void );
+	Vector					GetPortalVelocity( void );
+	Vector					GetRelativeVelocity( CBaseEntity *pOther );
 	void					detectMove();
 	void					findParent();
 	bool					HasParent( void ) { return m_hRelativeEntity != NULL; }
-	void					MoveForward();
 
 	void					PlacementThink( void );
 	void					FindRelativeEntityThink( void );

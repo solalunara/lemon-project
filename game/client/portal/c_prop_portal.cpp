@@ -185,7 +185,8 @@ static C_PortalInitHelper s_PortalInitHelper;
 
 
 
-C_Prop_Portal::C_Prop_Portal( void )
+C_Prop_Portal::C_Prop_Portal( void ) :
+	m_PortalSimulator( this )
 {
 	TransformedLighting.m_LightShadowHandle = CLIENTSHADOW_INVALID_HANDLE;
 	CProp_Portal_Shared::AllPortals.AddToTail( this );
@@ -220,7 +221,7 @@ void C_Prop_Portal::Activate( void )
 
 void C_Prop_Portal::ClientThink( void )
 {
-	if ( m_hRelativeEntity.Get() != m_PortalSimulator.m_DataAccess.Parent )
+	if ( m_hRelativeEntity.Get() != m_PortalSimulator.m_DataAccess.Parent.pEnt )
 		m_PortalSimulator.SetParent( m_hRelativeEntity.Get() );
 
 	//reseting the model once a server frame isn't enough as server is 65fps and client goes much higher
@@ -571,7 +572,7 @@ void C_Prop_Portal::OnDataChanged( DataUpdateType_t updateType )
 	//CBasePlayer *pPlayer = CBasePlayer::GetLocalPlayer();
 	// I tried having weapon_portalgun influence if the opening animation should play, but the network variable doesn't update in time for datachanged, so i'll use the static variable trick
 	bool bNewPortal = false;
-	bool bPortalMovedFar = ( ( PreDataChanged.m_vOrigin - m_ptOrigin ).Length() > 50 );
+	bool bPortalMovedFar = ( ( PreDataChanged.m_vOrigin - m_ptOrigin ).Length() > 5000 * gpGlobals->frametime );
 	static bool iNewPortal1 = false;
 	static bool iNewPortal2 = false;
 	if ( bPortalMovedFar )

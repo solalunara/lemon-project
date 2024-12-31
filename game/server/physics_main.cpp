@@ -33,7 +33,11 @@
 #include "vphysicsupdateai.h"
 #include "tier0/vcrmode.h"
 #include "pushentity.h"
+#ifdef PORTAL
 #include "PortalSimulation.h"
+#include "prop_portal.h"
+#include "portal_util_shared.h"
+#endif
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -228,8 +232,14 @@ bool CPhysicsPushedEntities::SpeculativelyCheckPush( PhysicsPushedInfo_t &info, 
 	CTraceFilterPushMove pushFilter(pBlocker, pBlocker->GetCollisionGroup() );
 
 	Vector pushDestPosition = pBlocker->GetAbsOrigin() + vecAbsPush;
+#ifdef PORTAL
+	CPortalSimulator *pSim = CPortalSimulator::GetSimulatorThatOwnsEntity( pBlocker );
+	UTIL_Portal_TraceEntity( pBlocker, pBlocker->GetAbsOrigin(), pushDestPosition, 
+		0, &pushFilter, &info.m_Trace );
+#else
 	UTIL_TraceEntity( pBlocker, pBlocker->GetAbsOrigin(), pushDestPosition, 
 		pBlocker->PhysicsSolidMaskForEntity(), &pushFilter, &info.m_Trace );
+#endif
 
 	RelinkPusherList(pPusherHandles);
 	info.m_bPusherIsGround = false;
@@ -237,18 +247,12 @@ bool CPhysicsPushedEntities::SpeculativelyCheckPush( PhysicsPushedInfo_t &info, 
 	{
 		info.m_bPusherIsGround = true;
 	}
-
-	//HACK: because portals can be on push movers, the player can end up coming out of a portal and into the trace,
-	// but the expected behaviour would be that the portal prevents the player from being pushed by the pusher
-	// this is only relevant for the player because her world center is within the pusher after teleportation,
-	// unlike most physics objects
-	if ( pBlocker->IsPlayer() )
-	{
-		CPortalSimulator *pSim = CPortalSimulator::GetSimulatorThatOwnsEntity( pBlocker );
-		if ( pSim )
-			if ( pSim->EntityIsInPortalHole( pBlocker ) )
-				return true;
-	}
+#ifdef PORTAL
+	// portal can have moving portals on pushers where things only collide with the collision entity
+	if ( pSim && pSim->m_DataAccess.Parent.pEnt == m_rgPusher[0].m_pEntity )
+		if ( pBlocker->GetGroundEntity() && pBlocker->GetGroundEntity()->GetRootMoveParent() == pSim->m_DataAccess.Simulation.pCollisionEntity )
+			info.m_bPusherIsGround = true;
+#endif
 
 	bool bIsUnblockable = (m_bIsUnblockableByPlayer && (pBlocker->IsPlayer() || pBlocker->MyNPCPointer())) ? true : false;
 	if ( bIsUnblockable )
@@ -712,6 +716,7 @@ void CPhysicsPushedEntities::GenerateBlockingEntityList()
 		partition->EnumerateElementsInBox( PARTITION_ENGINE_NON_STATIC_EDICTS, vecAbsMins, vecAbsMaxs, false, &blockerEnum );
 
 		//Go back throught the generated list.
+#ifdef PORTAL
 		//HACK: because portals can be on push movers, the player can end up coming out of a portal and into the trace,
 		// but the expected behaviour would be that the portal prevents the player from being pushed by the pusher
 		// this is only relevant for the player because her world center is within the pusher after teleportation,
@@ -723,6 +728,7 @@ void CPhysicsPushedEntities::GenerateBlockingEntityList()
 			if ( pSim )
 				m_rgMoved.Remove( i-- );
 		}
+#endif
 
 	}
 }
@@ -764,17 +770,27 @@ void CPhysicsPushedEntities::GenerateBlockingEntityListAddBox( const Vector &vec
 		partition->EnumerateElementsInBox( PARTITION_ENGINE_NON_STATIC_EDICTS, vecAbsMins, vecAbsMaxs, false, &blockerEnum );
 
 		//Go back throught the generated list.
+#ifdef PORTAL
 		//HACK: because portals can be on push movers, the player can end up coming out of a portal and into the trace,
 		// but the expected behaviour would be that the portal prevents the player from being pushed by the pusher
 		// this is only relevant for the player because her world center is within the pusher after teleportation,
 		// unlike most physics objects
 		for ( int i = 0; i < m_rgMoved.Count(); ++i )
-		if ( m_rgMoved[ i ].m_pEntity->IsPlayer() )
 		{
-			CPortalSimulator *pSim = CPortalSimulator::GetSimulatorThatOwnsEntity( m_rgMoved[ i ].m_pEntity );
+			CBaseEntity *pEnt = m_rgMoved[ i ].m_pEntity;
+			CPortalSimulator *pSim = CPortalSimulator::GetSimulatorThatOwnsEntity( pEnt );
 			if ( pSim )
-				m_rgMoved.Remove( i-- );
+			{
+				Vector vRelVel = static_cast<CProp_Portal *>( pSim->m_DataAccess.Portal )->GetRelativeVelocity( pEnt );
+				
+				CTraceFilterSimple baseFilter( pEnt, pEnt->GetCollisionGroup() );
+				trace_t tr;
+				UTIL_Portal_TraceEntity( pEnt, pEnt->GetAbsOrigin(), pEnt->GetAbsOrigin() + vRelVel.Normalized() * 10, MASK_PLAYERSOLID, &baseFilter, &tr );
+				if ( tr.fraction == 1.0f )
+					m_rgMoved.Remove( i-- );
+			}
 		}
+#endif
 
 	}
 }

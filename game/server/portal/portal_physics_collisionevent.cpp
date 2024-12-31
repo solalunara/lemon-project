@@ -71,7 +71,7 @@ int CPortal_CollisionEvent::ShouldCollide( IPhysicsObject *pObj0, IPhysicsObject
 		if( bStatic[0] && bStatic[1] )
 			return 0;
 
-#ifdef _DEBUG
+#if 0
 		for ( int i = 0; i != 2; ++i )
 		{
 			if ( ( pSimulators[i] != NULL ) && CPhysicsShadowClone::IsShadowClone( pEntities[i] ) )
