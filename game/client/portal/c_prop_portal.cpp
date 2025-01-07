@@ -573,6 +573,8 @@ void C_Prop_Portal::OnDataChanged( DataUpdateType_t updateType )
 	// I tried having weapon_portalgun influence if the opening animation should play, but the network variable doesn't update in time for datachanged, so i'll use the static variable trick
 	bool bNewPortal = false;
 	bool bPortalMovedFar = ( ( PreDataChanged.m_vOrigin - m_ptOrigin ).Length() > 5000 * gpGlobals->frametime );
+	if ( gpGlobals->frametime == 0 )
+		bPortalMovedFar = false;
 	static bool iNewPortal1 = false;
 	static bool iNewPortal2 = false;
 	if ( bPortalMovedFar )

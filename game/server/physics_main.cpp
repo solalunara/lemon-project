@@ -235,7 +235,7 @@ bool CPhysicsPushedEntities::SpeculativelyCheckPush( PhysicsPushedInfo_t &info, 
 #ifdef PORTAL
 	CPortalSimulator *pSim = CPortalSimulator::GetSimulatorThatOwnsEntity( pBlocker );
 	UTIL_Portal_TraceEntity( pBlocker, pBlocker->GetAbsOrigin(), pushDestPosition, 
-		0, &pushFilter, &info.m_Trace );
+		pBlocker->PhysicsSolidMaskForEntity(), &pushFilter, &info.m_Trace );
 #else
 	UTIL_TraceEntity( pBlocker, pBlocker->GetAbsOrigin(), pushDestPosition, 
 		pBlocker->PhysicsSolidMaskForEntity(), &pushFilter, &info.m_Trace );

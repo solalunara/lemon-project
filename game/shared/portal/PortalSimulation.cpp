@@ -2717,7 +2717,7 @@ void CPortalSimulator::PrePhysFrame( void )
 				Color c_world( 255, 255, 255 );
 				if ( r_draw_tube.GetBool() )
 					for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Static.Wall.Local.Tube.Polyhedrons.Count(); ++i )
-						DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.Wall.Local.Tube.Polyhedrons[ i ], c_tube, pPortal );
+						DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.Wall.Local.Tube.Polyhedrons[ i ], c_tube, pSimulator->m_InternalData.Parent.pEnt ? pPortal : NULL );
 				if ( r_draw_wall.GetBool() )
 					for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Static.Wall.Local.Brushes.Polyhedrons.Count(); ++i )
 						DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.Wall.Local.Brushes.Polyhedrons[ i ], c_wall, pSimulator->m_InternalData.Parent.pEnt );
@@ -2998,6 +2998,8 @@ static CPhysCollide *ConvertPolyhedronsToCollideable( CPolyhedron **pPolyhedrons
 		
 		if( pConvexes[iConvexCount] )
 			++iConvexCount;		
+		else
+			Msg( "" );
 	}
 	STOPDEBUGTIMER( convexTimer );
 	DEBUGTIMERONLY( DevMsg( 2, "[PSDT:%d] %sConvex Generation:%fms\n", s_iPortalSimulatorGUID, TABSPACING, convexTimer.GetDuration().GetMillisecondsF() ); );
