@@ -647,6 +647,16 @@ void UTIL_Portal_TraceRay( const CProp_Portal *pPortal, const Ray_t &ray, unsign
 				}
 			}
 
+			if( portalSimulator.m_DataAccess.Simulation.Static.Wall.Local.World.pCollideable )
+			{
+				physcollision->TraceBox( ray, portalSimulator.m_DataAccess.Simulation.Static.Wall.Local.World.pCollideable, vec3_origin, vec3_angle, &TempTrace );
+				if( (TempTrace.fraction < pTrace->fraction) )
+				{
+					*pTrace = TempTrace;
+					bCopyBackBrushTraceData = true;
+				}
+			}
+
 			//if( portalSimulator.m_DataAccess.Simulation.Static.Wall.RemoteTransformedToLocal.Brushes.pCollideable && sv_portal_trace_vs_world.GetBool() )
 			if( bTraceTransformedGeometry && pLinkedPortalSimulator->m_DataAccess.Simulation.Static.World.Brushes.pCollideable )
 			{
@@ -980,6 +990,29 @@ void UTIL_Portal_TraceEntity( CBaseEntity *pEntity, const Vector &vecAbsStart, c
 				//							pPortalSimulator->m_DataAccess.Simulation.Static.Wall.Local.Brushes.pCollideable, vec3_origin, vec3_angle, &tempTrace );
 
 				physcollision->TraceBox( entRay, MASK_ALL, NULL, pPortalSimulator->m_DataAccess.Simulation.Static.Wall.Local.Brushes.pCollideable, vCollideOrigin, qCollideAngle, &tempTrace );
+
+				if ( tempTrace.startsolid || (tempTrace.fraction < pTrace->fraction) )
+				{
+					if( tempTrace.fraction == 0.0f )
+						tempTrace.startsolid = true;
+
+					if( tempTrace.fractionleftsolid == 1.0f )
+						tempTrace.allsolid = true;
+
+					*pTrace = tempTrace;
+				}
+			}
+
+			if ( pPortalSimulator->m_DataAccess.Simulation.Static.Wall.Local.World.pCollideable && 
+#ifndef CLIENT_DLL
+			    pFilter->ShouldHitEntity( pEntity, pPortalSimulator->m_DataAccess.Simulation.Static.Wall.Local.World.pPhysicsObject->GetContents() ) && 
+#endif
+				sv_portal_trace_vs_holywall.GetBool() )
+			{
+				//physcollision->TraceCollide( vecAbsStart, vecAbsEnd, pCollision, qCollisionAngles,
+				//							pPortalSimulator->m_DataAccess.Simulation.Static.Wall.Local.World.pCollideable, vec3_origin, vec3_angle, &tempTrace );
+
+				physcollision->TraceBox( entRay, MASK_ALL, NULL, pPortalSimulator->m_DataAccess.Simulation.Static.Wall.Local.World.pCollideable, vec3_origin, vec3_angle, &tempTrace );
 
 				if ( tempTrace.startsolid || (tempTrace.fraction < pTrace->fraction) )
 				{

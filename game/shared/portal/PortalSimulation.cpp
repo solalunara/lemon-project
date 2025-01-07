@@ -1443,6 +1443,17 @@ void CPortalSimulator::CreateLocalPhysics( bool update )
 			}
 		}
 
+		Assert( m_InternalData.Simulation.Static.Wall.Local.World.pPhysicsObject == NULL ); //Be sure to find graceful fixes for asserts, performance is a big concern with portal simulation
+		if( m_InternalData.Simulation.Static.Wall.Local.World.pCollideable != NULL )
+		{
+			m_InternalData.Simulation.Static.Wall.Local.World.pPhysicsObject = m_InternalData.Simulation.pPhysicsEnvironment->CreatePolyObjectStatic( m_InternalData.Simulation.Static.Wall.Local.World.pCollideable, m_InternalData.Simulation.Static.SurfaceProperties.surface.surfaceProps, vec3_origin, vec3_angle, &params );
+
+			if( (m_InternalData.Simulation.pCollisionEntity != NULL) && (m_InternalData.Simulation.pCollisionEntity->VPhysicsGetObject() == NULL) )
+				m_InternalData.Simulation.pCollisionEntity->VPhysicsSetObject(m_InternalData.Simulation.Static.World.Brushes.pPhysicsObject);
+
+			m_InternalData.Simulation.Static.Wall.Local.World.pPhysicsObject->RecheckCollisionFilter(); //some filters only work after the variable is stored in the class
+		}
+
 		Assert( m_InternalData.Simulation.Static.Wall.Local.Tube.pPhysicsObject == NULL || update ); //Be sure to find graceful fixes for asserts, performance is a big concern with portal simulation
 		if( m_InternalData.Simulation.Static.Wall.Local.Tube.pCollideable != NULL )
 		{
@@ -1694,6 +1705,12 @@ void CPortalSimulator::ClearLocalPhysics( bool update )
 		m_InternalData.Simulation.Static.Wall.Local.Brushes.pPhysicsObject = NULL;
 	}
 
+	if( m_InternalData.Simulation.Static.Wall.Local.World.pPhysicsObject )
+	{
+		m_InternalData.Simulation.pPhysicsEnvironment->DestroyObject( m_InternalData.Simulation.Static.Wall.Local.World.pPhysicsObject );
+		m_InternalData.Simulation.Static.Wall.Local.World.pPhysicsObject = NULL;
+	}
+
 	if( m_InternalData.Simulation.Static.Wall.Local.Tube.pPhysicsObject && !update )
 	{
 		m_InternalData.Simulation.pPhysicsEnvironment->DestroyObject( m_InternalData.Simulation.Static.Wall.Local.Tube.pPhysicsObject );
@@ -1927,6 +1944,13 @@ void CPortalSimulator::CreateLocalCollision( bool update )
 		STOPDEBUGTIMER( wallBrushTimer );
 		DEBUGTIMERONLY( DevMsg( 2, "[PSDT:%d] %sWall Brushes=%fms\n", GetPortalSimulatorGUID(), TABSPACING, wallBrushTimer.GetDuration().GetMillisecondsF() ); );
 	}
+	
+	if ( IsSimulatingVPhysics() )
+	{
+		Assert( m_InternalData.Simulation.Static.Wall.Local.World.pCollideable == NULL ); //Be sure to find graceful fixes for asserts, performance is a big concern with portal simulation
+		if( m_InternalData.Simulation.Static.Wall.Local.World.Polyhedrons.Count() != 0 )
+			m_InternalData.Simulation.Static.Wall.Local.World.pCollideable = ConvertPolyhedronsToCollideable( m_InternalData.Simulation.Static.Wall.Local.World.Polyhedrons.Base(), m_InternalData.Simulation.Static.Wall.Local.World.Polyhedrons.Count() );
+	}
 
 	if ( !update )
 	{
@@ -2039,6 +2063,12 @@ void CPortalSimulator::ClearLocalCollision( bool update )
 	{
 		physcollision->DestroyCollide( m_InternalData.Simulation.Static.Wall.Local.Brushes.pCollideable );
 		m_InternalData.Simulation.Static.Wall.Local.Brushes.pCollideable = NULL;
+	}
+
+	if( m_InternalData.Simulation.Static.Wall.Local.World.pCollideable )
+	{
+		physcollision->DestroyCollide( m_InternalData.Simulation.Static.Wall.Local.World.pCollideable );
+		m_InternalData.Simulation.Static.Wall.Local.World.pCollideable = NULL;
 	}
 
 	if( m_InternalData.Simulation.Static.Wall.Local.Tube.pCollideable && !update )
@@ -2239,8 +2269,8 @@ void CPortalSimulator::CreatePolyhedrons( bool update )
 	//(Holy) Wall
 	if ( !update )
 	{
-		Assert( m_InternalData.Simulation.Static.Wall.Local.Tube.Polyhedrons.Count() == 0 || m_InternalData.Parent.pEnt );
-		Assert( m_InternalData.Simulation.Static.Wall.Local.Brushes.Polyhedrons.Count() == 0 || m_InternalData.Parent.pEnt );
+		Assert( m_InternalData.Simulation.Static.Wall.Local.Tube.Polyhedrons.Count() == 0 );
+		Assert( m_InternalData.Simulation.Static.Wall.Local.Brushes.Polyhedrons.Count() == 0 );
 
 		Vector ptCenter = m_InternalData.Placement.ptCenter;
 
@@ -2528,6 +2558,219 @@ void CPortalSimulator::CreatePolyhedrons( bool update )
 		WallBrushPolyhedrons_ClippedToWall.RemoveAll();
 	}
 
+	//If we have a parent, add any world brushes that might have otherwise been captured by a wall check
+	if ( m_InternalData.Parent.pEnt )
+	{
+		Assert( m_InternalData.Simulation.Static.Wall.Local.World.Polyhedrons.Count() == 0 );
+
+		Vector ptCenter = m_InternalData.Placement.ptCenter;
+
+		Vector vForward = m_InternalData.Placement.vForward;
+		Vector vRight = m_InternalData.Placement.vRight;
+		Vector vUp = m_InternalData.Placement.vUp;
+		Vector vNorm = m_InternalData.Placement.PortalPlane.m_Normal;
+
+		Vector vBackward = -vForward;
+		Vector vLeft = -vRight;
+		Vector vDown = -vUp;
+
+		Vector vOBBForward = -vForward;
+		Vector vOBBRight = -vRight;
+		Vector vOBBUp = vUp;
+
+		//scale the extents to usable sizes
+		vOBBForward *= PORTAL_WALL_FARDIST / 4.0f;
+		vOBBRight *= PORTAL_HALF_HEIGHT * 2.0f - 1.0f;
+		vOBBUp *= PORTAL_HALF_HEIGHT * 2.0f - 1.0f;
+
+		Vector ptOBBOrigin = ptCenter;
+		ptOBBOrigin -= vOBBRight / 2.0f;
+		ptOBBOrigin -= vOBBUp / 2.0f;
+
+		Vector vAABBMins, vAABBMaxs;
+		vAABBMins = vAABBMaxs = ptOBBOrigin;
+
+		for( int i = 1; i != 8; ++i )
+		{
+			Vector ptTest = ptOBBOrigin;
+			if( i & (1 << 0) ) ptTest += vOBBForward;
+			if( i & (1 << 1) ) ptTest += vOBBRight;
+			if( i & (1 << 2) ) ptTest += vOBBUp;
+
+			if( ptTest.x < vAABBMins.x ) vAABBMins.x = ptTest.x;
+			if( ptTest.y < vAABBMins.y ) vAABBMins.y = ptTest.y;
+			if( ptTest.z < vAABBMins.z ) vAABBMins.z = ptTest.z;
+			if( ptTest.x > vAABBMaxs.x ) vAABBMaxs.x = ptTest.x;
+			if( ptTest.y > vAABBMaxs.y ) vAABBMaxs.y = ptTest.y;
+			if( ptTest.z > vAABBMaxs.z ) vAABBMaxs.z = ptTest.z;
+		}
+
+
+		float fPlanes[6 * 4];
+
+		//first and second planes are always forward and backward planes
+		fPlanes[(0*4) + 0] = vForward.x;
+		fPlanes[(0*4) + 1] = vForward.y;
+		fPlanes[(0*4) + 2] = vForward.z;
+		fPlanes[(0*4) + 3] = vForward.Dot( ptCenter ) - PORTAL_WALL_TUBE_OFFSET;
+
+		fPlanes[(1*4) + 0] = vBackward.x;
+		fPlanes[(1*4) + 1] = vBackward.y;
+		fPlanes[(1*4) + 2] = vBackward.z;
+		float fTubeDepthDist = vBackward.Dot( ptCenter + (vBackward * (PORTAL_WALL_TUBE_DEPTH + PORTAL_WALL_TUBE_OFFSET)) );
+		fPlanes[(1*4) + 3] = fTubeDepthDist;
+
+
+		//the remaining planes will always have the same ordering of normals, with different distances plugged in for each convex we're creating
+		//normal order is up, down, left, right
+
+		fPlanes[(2*4) + 0] = vUp.x;
+		fPlanes[(2*4) + 1] = vUp.y;
+		fPlanes[(2*4) + 2] = vUp.z;
+		fPlanes[(2*4) + 3] = vUp.Dot( ptCenter + (vUp * PORTAL_HOLE_HALF_HEIGHT) );
+
+		fPlanes[(3*4) + 0] = vDown.x;
+		fPlanes[(3*4) + 1] = vDown.y;
+		fPlanes[(3*4) + 2] = vDown.z;
+		fPlanes[(3*4) + 3] = vDown.Dot( ptCenter + (vDown * PORTAL_HOLE_HALF_HEIGHT) );
+
+		fPlanes[(4*4) + 0] = vLeft.x;
+		fPlanes[(4*4) + 1] = vLeft.y;
+		fPlanes[(4*4) + 2] = vLeft.z;
+		fPlanes[(4*4) + 3] = vLeft.Dot( ptCenter + (vLeft * PORTAL_HOLE_HALF_WIDTH) );
+
+		fPlanes[(5*4) + 0] = vRight.x;
+		fPlanes[(5*4) + 1] = vRight.y;
+		fPlanes[(5*4) + 2] = vRight.z;
+		fPlanes[(5*4) + 3] = vRight.Dot( ptCenter + (vRight * PORTAL_HOLE_HALF_WIDTH) );
+
+		float *fSidePlanesOnly = &fPlanes[(2*4)];
+
+		//these 2 get re-used a bit
+		float fFarRightPlaneDistance = vRight.Dot( ptCenter + vRight * (PORTAL_WALL_FARDIST * 10.0f) );
+		float fFarLeftPlaneDistance = vLeft.Dot( ptCenter + vLeft * (PORTAL_WALL_FARDIST * 10.0f) );
+
+
+		CUtlVector<int> WallBrushes;
+		CUtlVector<CPolyhedron *> WallBrushPolyhedrons_ClippedToWall;
+		CPolyhedron **pWallClippedPolyhedrons = NULL;
+		int iWallClippedPolyhedronCount = 0;
+		if( IsSimulatingVPhysics() ) //if not simulating vphysics, we skip making the entire wall, and just create the minimal tube instead
+		{
+			enginetrace->GetBrushesInAABB( vAABBMins, vAABBMaxs, &WallBrushes, MASK_SOLID_BRUSHONLY );
+
+			if( WallBrushes.Count() != 0 )
+				ConvertBrushListToClippedPolyhedronList( WallBrushes.Base(), WallBrushes.Count(), fPlanes, 1, PORTAL_POLYHEDRON_CUT_EPSILON, &WallBrushPolyhedrons_ClippedToWall );
+
+			if( WallBrushPolyhedrons_ClippedToWall.Count() != 0 )
+			{
+				for( int i = WallBrushPolyhedrons_ClippedToWall.Count(); --i >= 0; )
+				{
+					CPolyhedron *pPolyhedron = ClipPolyhedron( WallBrushPolyhedrons_ClippedToWall[i], fSidePlanesOnly, 4, PORTAL_POLYHEDRON_CUT_EPSILON, true );
+					if( pPolyhedron )
+					{
+						//a chunk of this brush passes through the hole, not eligible to be removed from cutting
+						pPolyhedron->Release();
+					}
+					else
+					{
+						//no part of this brush interacts with the hole, no point in cutting the brush any later
+						m_InternalData.Simulation.Static.Wall.Local.World.Polyhedrons.AddToTail( WallBrushPolyhedrons_ClippedToWall[i] );
+						WallBrushPolyhedrons_ClippedToWall.FastRemove( i );
+					}
+				}
+
+				if( WallBrushPolyhedrons_ClippedToWall.Count() != 0 ) //might have become 0 while removing uncut brushes
+				{
+					pWallClippedPolyhedrons = WallBrushPolyhedrons_ClippedToWall.Base();
+					iWallClippedPolyhedronCount = WallBrushPolyhedrons_ClippedToWall.Count();
+				}
+			}
+		}
+
+
+		//upper wall
+		{
+			//minimal portion that extends into the hole space
+			//fPlanes[(1*4) + 3] = fTubeDepthDist;
+			fPlanes[(2*4) + 3] = vUp.Dot( ptCenter + vUp * (PORTAL_HOLE_HALF_HEIGHT + PORTAL_WALL_MIN_THICKNESS) );
+			fPlanes[(3*4) + 3] = vDown.Dot( ptCenter + vUp * PORTAL_HOLE_HALF_HEIGHT );
+			fPlanes[(4*4) + 3] = vLeft.Dot( ptCenter + vLeft * (PORTAL_HOLE_HALF_WIDTH + PORTAL_WALL_MIN_THICKNESS) );
+			fPlanes[(5*4) + 3] = vRight.Dot( ptCenter + vRight * (PORTAL_HOLE_HALF_WIDTH + PORTAL_WALL_MIN_THICKNESS) );
+
+			//general hole cut
+			//fPlanes[(1*4) + 3] += 2000.0f;
+			fPlanes[(2*4) + 3] = vUp.Dot( ptCenter + vUp * (PORTAL_WALL_FARDIST * 10.0f) );
+			fPlanes[(3*4) + 3] = vDown.Dot( ptCenter + vUp * (PORTAL_HOLE_HALF_HEIGHT + PORTAL_WALL_MIN_THICKNESS) );
+			fPlanes[(4*4) + 3] = fFarLeftPlaneDistance;
+			fPlanes[(5*4) + 3] = fFarRightPlaneDistance;
+
+			ClipPolyhedrons( pWallClippedPolyhedrons, iWallClippedPolyhedronCount, fSidePlanesOnly, 4, PORTAL_POLYHEDRON_CUT_EPSILON, &m_InternalData.Simulation.Static.Wall.Local.World.Polyhedrons );
+		}
+
+		//lower wall
+		{
+			//minimal portion that extends into the hole space
+			//fPlanes[(1*4) + 3] = fTubeDepthDist;
+			fPlanes[(2*4) + 3] = vUp.Dot( ptCenter + (vDown * PORTAL_HOLE_HALF_HEIGHT) );
+			fPlanes[(3*4) + 3] = vDown.Dot( ptCenter + vDown * (PORTAL_HOLE_HALF_HEIGHT + PORTAL_WALL_MIN_THICKNESS) );
+			fPlanes[(4*4) + 3] = vLeft.Dot( ptCenter + vLeft * (PORTAL_HOLE_HALF_WIDTH + PORTAL_WALL_MIN_THICKNESS) );
+			fPlanes[(5*4) + 3] = vRight.Dot( ptCenter + vRight * (PORTAL_HOLE_HALF_WIDTH + PORTAL_WALL_MIN_THICKNESS) );
+
+			//general hole cut
+			//fPlanes[(1*4) + 3] += 2000.0f;
+			fPlanes[(2*4) + 3] = vUp.Dot( ptCenter + (vDown * (PORTAL_HOLE_HALF_HEIGHT + PORTAL_WALL_MIN_THICKNESS)) );
+			fPlanes[(3*4) + 3] = vDown.Dot( ptCenter + (vDown * (PORTAL_WALL_FARDIST * 10.0f)) );
+			fPlanes[(4*4) + 3] = fFarLeftPlaneDistance;
+			fPlanes[(5*4) + 3] = fFarRightPlaneDistance;
+
+			ClipPolyhedrons( pWallClippedPolyhedrons, iWallClippedPolyhedronCount, fSidePlanesOnly, 4, PORTAL_POLYHEDRON_CUT_EPSILON, &m_InternalData.Simulation.Static.Wall.Local.World.Polyhedrons );
+		}
+
+		//left wall
+		{
+			//minimal portion that extends into the hole space
+			//fPlanes[(1*4) + 3] = fTubeDepthDist;
+			fPlanes[(2*4) + 3] = vUp.Dot( ptCenter + (vUp * PORTAL_HOLE_HALF_HEIGHT) );
+			fPlanes[(3*4) + 3] = vDown.Dot( ptCenter + (vDown * PORTAL_HOLE_HALF_HEIGHT) );
+			fPlanes[(4*4) + 3] = vLeft.Dot( ptCenter + (vLeft * (PORTAL_HOLE_HALF_WIDTH + PORTAL_WALL_MIN_THICKNESS)) );
+			fPlanes[(5*4) + 3] = vRight.Dot( ptCenter + (vLeft * PORTAL_HOLE_HALF_WIDTH) );
+
+			//general hole cut
+			//fPlanes[(1*4) + 3] += 2000.0f;
+			fPlanes[(2*4) + 3] = vUp.Dot( ptCenter + (vUp * (PORTAL_HOLE_HALF_HEIGHT + PORTAL_WALL_MIN_THICKNESS)) );
+			fPlanes[(3*4) + 3] = vDown.Dot( ptCenter - (vUp * (PORTAL_HOLE_HALF_HEIGHT + PORTAL_WALL_MIN_THICKNESS)) );
+			fPlanes[(4*4) + 3] = fFarLeftPlaneDistance;
+			fPlanes[(5*4) + 3] = vRight.Dot( ptCenter + (vLeft * (PORTAL_HOLE_HALF_WIDTH + PORTAL_WALL_MIN_THICKNESS)) );
+
+			ClipPolyhedrons( pWallClippedPolyhedrons, iWallClippedPolyhedronCount, fSidePlanesOnly, 4, PORTAL_POLYHEDRON_CUT_EPSILON, &m_InternalData.Simulation.Static.Wall.Local.World.Polyhedrons );
+		}
+
+		//right wall
+		{
+			//minimal portion that extends into the hole space
+			//fPlanes[(1*4) + 3] = fTubeDepthDist;
+			fPlanes[(2*4) + 3] = vUp.Dot( ptCenter + (vUp * (PORTAL_HOLE_HALF_HEIGHT)) );
+			fPlanes[(3*4) + 3] = vDown.Dot( ptCenter + (vDown * (PORTAL_HOLE_HALF_HEIGHT)) );
+			fPlanes[(4*4) + 3] = vLeft.Dot( ptCenter + vRight * PORTAL_HOLE_HALF_WIDTH );
+			fPlanes[(5*4) + 3] = vRight.Dot( ptCenter + vRight * (PORTAL_HOLE_HALF_WIDTH + PORTAL_WALL_MIN_THICKNESS) );
+
+			//general hole cut
+			//fPlanes[(1*4) + 3] += 2000.0f;
+			fPlanes[(2*4) + 3] = vUp.Dot( ptCenter + (vUp * (PORTAL_HOLE_HALF_HEIGHT + PORTAL_WALL_MIN_THICKNESS)) );
+			fPlanes[(3*4) + 3] = vDown.Dot( ptCenter + (vDown * (PORTAL_HOLE_HALF_HEIGHT + PORTAL_WALL_MIN_THICKNESS)) );
+			fPlanes[(4*4) + 3] = vLeft.Dot( ptCenter + vRight * (PORTAL_HOLE_HALF_WIDTH + PORTAL_WALL_MIN_THICKNESS) );
+			fPlanes[(5*4) + 3] = fFarRightPlaneDistance;
+
+			ClipPolyhedrons( pWallClippedPolyhedrons, iWallClippedPolyhedronCount, fSidePlanesOnly, 4, PORTAL_POLYHEDRON_CUT_EPSILON, &m_InternalData.Simulation.Static.Wall.Local.World.Polyhedrons );
+		}
+
+		for( int i = WallBrushPolyhedrons_ClippedToWall.Count(); --i >= 0; )
+			WallBrushPolyhedrons_ClippedToWall[i]->Release();
+
+		WallBrushPolyhedrons_ClippedToWall.RemoveAll();
+	}
+
 
 	STOPDEBUGTIMER( functionTimer );
 	DECREMENTTABSPACING();
@@ -2580,6 +2823,14 @@ void CPortalSimulator::ClearPolyhedrons( bool update )
 			m_InternalData.Simulation.Static.Wall.Local.Brushes.Polyhedrons[i]->Release();
 
 		m_InternalData.Simulation.Static.Wall.Local.Brushes.Polyhedrons.RemoveAll();
+	}
+
+	if( m_InternalData.Simulation.Static.Wall.Local.World.Polyhedrons.Count() != 0 )
+	{
+		for( int i = m_InternalData.Simulation.Static.Wall.Local.World.Polyhedrons.Count(); --i >= 0; )
+			m_InternalData.Simulation.Static.Wall.Local.World.Polyhedrons[i]->Release();
+
+		m_InternalData.Simulation.Static.Wall.Local.World.Polyhedrons.RemoveAll();
 	}
 
 	if( m_InternalData.Simulation.Static.Wall.Local.Tube.Polyhedrons.Count() != 0  && !update )
@@ -2692,6 +2943,7 @@ ConVar r_psDrawPortalInt ( "r_psDrawPortalInt", "0" );
 ConVar r_draw_tube ( "r_draw_tube", "0" );
 ConVar r_draw_wall ( "r_draw_wall", "0" );
 ConVar r_draw_world ( "r_draw_world", "0" );
+ConVar r_draw_worldwall ( "r_draw_worldwall", "0" );
 ConVar r_draw_shadowclones ( "r_draw_shadowclones", "0" );
 ConVar r_draw_holeshape ( "r_draw_holeshape", "0" );
 ConVar r_draw_staticprops ( "r_draw_staticprops", "0" );
@@ -2721,6 +2973,9 @@ void CPortalSimulator::PrePhysFrame( void )
 				if ( r_draw_wall.GetBool() )
 					for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Static.Wall.Local.Brushes.Polyhedrons.Count(); ++i )
 						DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.Wall.Local.Brushes.Polyhedrons[ i ], c_wall, pSimulator->m_InternalData.Parent.pEnt );
+				if ( r_draw_worldwall.GetBool() )
+					for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Static.Wall.Local.World.Polyhedrons.Count(); ++i )
+						DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.Wall.Local.World.Polyhedrons[ i ], c_wall, NULL );
 				if ( r_draw_world.GetBool() )
 					for ( int i = 0; i < pSimulator->m_InternalData.Simulation.Static.World.Brushes.Polyhedrons.Count(); ++i )
 						DrawPolyhedronWireframe( pSimulator->m_InternalData.Simulation.Static.World.Brushes.Polyhedrons[ i ], c_world, NULL );
@@ -2892,7 +3147,9 @@ CPortalSimulator *CPortalSimulator::GetSimulatorThatCreatedPhysicsObject( const 
 
 bool CPortalSimulator::CreatedPhysicsObject( const IPhysicsObject *pObject, PS_PhysicsObjectSourceType_t *pOut_SourceType ) const
 {
-	if( (pObject == m_InternalData.Simulation.Static.World.Brushes.pPhysicsObject) || (pObject == m_InternalData.Simulation.Static.Wall.Local.Brushes.pPhysicsObject) )
+	if( (pObject == m_InternalData.Simulation.Static.World.Brushes.pPhysicsObject) 
+		|| (pObject == m_InternalData.Simulation.Static.Wall.Local.Brushes.pPhysicsObject) 
+		|| (m_InternalData.Parent.pEnt && pObject == m_InternalData.Simulation.Static.Wall.Local.World.pPhysicsObject ) )
 	{
 		if( pOut_SourceType )
 			*pOut_SourceType = PSPOST_LOCAL_BRUSHES;
@@ -3297,6 +3554,8 @@ IPhysicsObject *CPSCollisionEntity::VPhysicsGetObject( void )
 		return m_pOwningSimulator->m_DataAccess.Simulation.Static.Wall.Local.Brushes.pPhysicsObject;
 	else if( m_pOwningSimulator->m_DataAccess.Simulation.Static.Wall.Local.Tube.pPhysicsObject != NULL )
 		return m_pOwningSimulator->m_DataAccess.Simulation.Static.Wall.Local.Brushes.pPhysicsObject;
+	else if( m_pOwningSimulator->m_DataAccess.Simulation.Static.Wall.Local.World.pPhysicsObject != NULL )
+		return m_pOwningSimulator->m_DataAccess.Simulation.Static.Wall.Local.World.pPhysicsObject;
 	else if( m_pOwningSimulator->m_DataAccess.Simulation.Static.Wall.RemoteTransformedToLocal.Brushes.pPhysicsObject != NULL )
 		return m_pOwningSimulator->m_DataAccess.Simulation.Static.Wall.RemoteTransformedToLocal.Brushes.pPhysicsObject;
 	else
@@ -3324,6 +3583,14 @@ int CPSCollisionEntity::VPhysicsGetObjectList( IPhysicsObject **pList, int listM
 	if( m_pOwningSimulator->m_DataAccess.Simulation.Static.Wall.Local.Brushes.pPhysicsObject != NULL )
 	{
 		pList[iRetVal] = m_pOwningSimulator->m_DataAccess.Simulation.Static.Wall.Local.Brushes.pPhysicsObject;
+		++iRetVal;
+		if( iRetVal == listMax )
+			return iRetVal;
+	}
+
+	if( m_pOwningSimulator->m_DataAccess.Simulation.Static.Wall.Local.World.pPhysicsObject != NULL )
+	{
+		pList[iRetVal] = m_pOwningSimulator->m_DataAccess.Simulation.Static.Wall.Local.World.pPhysicsObject;
 		++iRetVal;
 		if( iRetVal == listMax )
 			return iRetVal;

@@ -184,10 +184,24 @@ struct PS_SD_Static_Wall_Local_Brushes_t
 #endif
 };
 
+struct PS_SD_Static_Wall_Local_World_t 
+{
+	CUtlVector<CPolyhedron *> Polyhedrons; //the building blocks of more complex collision
+	CPhysCollide *pCollideable;
+
+#ifndef CLIENT_DLL
+	IPhysicsObject *pPhysicsObject;
+	PS_SD_Static_Wall_Local_World_t() : pCollideable(NULL), pPhysicsObject(NULL) {};
+#else
+	PS_SD_Static_Wall_Local_World_t() : pCollideable(NULL) {};
+#endif
+};
+
 struct PS_SD_Static_Wall_Local_t //things in the wall that are completely independant of having a linked portal
 {
 	PS_SD_Static_Wall_Local_Tube_t Tube;
 	PS_SD_Static_Wall_Local_Brushes_t Brushes;
+	PS_SD_Static_Wall_Local_World_t World;
 };
 
 struct PS_SD_Static_Wall_RemoteTransformedToLocal_Brushes_t
